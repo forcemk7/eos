@@ -258,6 +258,16 @@ body {
   cursor: pointer;
 }
 
+/* Hidden file input: only opened via explicit dropzone click, never captures page clicks */
+.resume-file-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 /* Editor layout: main + version sidebar */
 .resume-editor-layout {
   display: grid;
@@ -778,6 +788,7 @@ body {
 }
 
 .resume-dropzone {
+  position: relative;
   border: 1px dashed var(--border);
   border-radius: 12px;
   background: var(--bg);

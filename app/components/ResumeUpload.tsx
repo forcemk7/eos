@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 interface ResumeUploadProps {
   onSuccess: () => void
@@ -10,6 +10,7 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
   const [status, setStatus] = useState('')
   const [error, setError] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function uploadFile(file: File) {
     if (!file) return
@@ -74,16 +75,22 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
       </p>
 
       <div
+        role="button"
+        tabIndex={0}
         className={`resume-dropzone ${dragOver ? 'drag-over' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
+        onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
       >
         <input
+          ref={fileInputRef}
           type="file"
           accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])}
-          className="resume-file-input"
+          className="resume-file-input-hidden"
+          aria-hidden
         />
         <p className="dropzone-title">Drop your resume here</p>
         <p className="dropzone-subtitle">or click to choose PDF or DOCX</p>

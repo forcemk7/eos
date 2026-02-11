@@ -47,10 +47,12 @@ export default function Home() {
       const data = await res.json()
       if (res.status === 401) {
         setUser(null)
+        setCurrent(null)
+        setVersions([])
         return
       }
       if (data.success) {
-        setCurrent(data.current)
+        setCurrent(data.current ?? null)
         setVersions(data.versions || [])
       }
     } catch (e) {

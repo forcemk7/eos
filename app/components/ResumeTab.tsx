@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 interface MasterResume {
   identity: {
@@ -21,6 +22,20 @@ interface MasterResume {
 
 const STORAGE_KEY_MASTER = 'eOS_masterResume'
 
+function parsedToMaster(parsed: any): MasterResume {
+  return {
+    identity: {
+      name: parsed?.identity?.name || '',
+      email: parsed?.identity?.email || '',
+      location: parsed?.identity?.location || '',
+      links: Array.isArray(parsed?.identity?.links) ? parsed.identity.links : [],
+    },
+    summary: parsed?.summary || '',
+    experience: Array.isArray(parsed?.experience) ? parsed.experience : [],
+    skills: Array.isArray(parsed?.skills) ? parsed.skills : [],
+  }
+}
+
 function escapeHtml(text: string | null | undefined): string {
   if (text == null) return ''
   const div = document.createElement('div')
@@ -33,19 +48,30 @@ export default function ResumeTab() {
   const [uploadStatus, setUploadStatus] = useState('')
   const [uploadError, setUploadError] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadMasterResume()
   }, [])
 
-  function loadMasterResume() {
+  async function loadMasterResume() {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_MASTER)
-      if (stored) {
-        setMasterResume(JSON.parse(stored))
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const res = await fetch('/api/resume', { credentials: 'include' })
+        const data = await res.json()
+        if (data.success && data.current?.parsed_data) {
+          setMasterResume(parsedToMaster(data.current.parsed_data))
+          return
+        }
       }
+      const stored = localStorage.getItem(STORAGE_KEY_MASTER)
+      if (stored) setMasterResume(JSON.parse(stored))
     } catch (e) {
       console.error('Failed to load master resume:', e)
+      const stored = localStorage.getItem(STORAGE_KEY_MASTER)
+      if (stored) setMasterResume(JSON.parse(stored))
     }
   }
 
@@ -80,34 +106,24 @@ export default function ResumeTab() {
       }
 
       const parsed = data.parsed || {}
+      const resume = parsedToMaster(parsed)
 
-      const resume: MasterResume = {
-        identity: {
-          name: parsed.identity?.name || '',
-          email: parsed.identity?.email || '',
-          location: parsed.identity?.location || '',
-          links: Array.isArray(parsed.identity?.links) ? parsed.identity.links : [],
-        },
-        summary: parsed.summary || '',
-        experience: Array.isArray(parsed.experience) ? parsed.experience : [],
-        skills: Array.isArray(parsed.skills) ? parsed.skills : [],
+      const saveRes = await fetch('/api/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parsed,
+          rawText: data.rawText || '',
+          fileName: data.fileName || file.name,
+        }),
+        credentials: 'include',
+      })
+      if (!saveRes.ok) {
+        const errData = await saveRes.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to save to cloud')
       }
 
-      // Save to database
-      try {
-        await fetch('/api/resume', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            parsed,
-            rawText: data.rawText || '',
-            fileName: data.fileName || file.name,
-          }),
-        })
-      } catch (dbErr) {
-        console.warn('Failed to save resume to database:', dbErr)
-      }
-
+      setMasterResume(resume)
       saveMasterResume(resume)
       setUploadStatus('Parsed successfully. This is now your master resume.')
     } catch (err: any) {
@@ -151,6 +167,8 @@ export default function ResumeTab() {
         </p>
 
         <div
+          role="button"
+          tabIndex={0}
           className={`resume-dropzone ${dragOver ? 'drag-over' : ''}`}
           onDragEnter={(e) => {
             e.preventDefault()
@@ -167,12 +185,17 @@ export default function ResumeTab() {
             setDragOver(false)
           }}
           onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
         >
           <input
+            ref={fileInputRef}
             id="resume-file-input"
             type="file"
             accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={handleFileChange}
+            className="resume-file-input-hidden"
+            aria-hidden
           />
           <div className="resume-dropzone-inner">
             <p className="dropzone-title">Drop your resume here</p>
