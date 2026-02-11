@@ -1,41 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { dbHelpers } from '@/lib/database'
 import { createServerSupabase, jsonWithCookies } from '@/lib/supabase/server'
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { user, response } = await createServerSupabase(req)
+  const { user, response, supabase } = await createServerSupabase(req)
   if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const { id } = await params
-    const version = await dbHelpers.getResumeById(id)
-    if (!version) {
-      return NextResponse.json({ success: false, error: 'Version not found' }, { status: 404 })
-    }
+    const { data: version, error } = await supabase
+      .from('resumes')
+      .select('id, created_at, file_name, parsed_data')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
 
-    if ((version as any).user_id !== user.id) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+    if (error || !version) {
+      return NextResponse.json({ success: false, error: 'Version not found' }, { status: 404 })
     }
 
     return jsonWithCookies(
       {
         success: true,
         version: {
-          id: (version as any).id,
-          created_at: (version as any).created_at,
-          file_name: (version as any).file_name,
-          parsed_data: (version as any).parsed_data,
+          id: version.id,
+          created_at: version.created_at,
+          file_name: version.file_name,
+          parsed_data: version.parsed_data ?? {},
         },
       },
       response
     )
-  } catch (error: any) {
-    console.error('Error loading resume version:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  } catch (err: any) {
+    console.error('Error loading resume version:', err)
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }

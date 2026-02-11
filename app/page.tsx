@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import AuthForm from './components/AuthForm'
@@ -20,18 +20,25 @@ export default function Home() {
   const [current, setCurrent] = useState<ResumeVersion | null>(null)
   const [versions, setVersions] = useState<ResumeVersion[]>([])
   const [loading, setLoading] = useState(true)
+  const userIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     let mounted = true
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (mounted) {
-        setUser(session?.user ?? null)
+        const u = session?.user ?? null
+        userIdRef.current = u?.id ?? null
+        setUser(u)
         setAuthLoading(false)
       }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) setUser(session?.user ?? null)
+      if (!mounted) return
+      const nextId = session?.user?.id ?? null
+      if (nextId === userIdRef.current) return
+      userIdRef.current = nextId
+      setUser(session?.user ?? null)
     })
     return () => {
       mounted = false
