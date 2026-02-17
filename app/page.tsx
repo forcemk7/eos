@@ -6,6 +6,13 @@ import { createClient } from '@/lib/supabase/client'
 import AuthForm from './components/AuthForm'
 import ResumeUpload from './components/ResumeUpload'
 import ResumeEditor, { ResumeData } from './components/ResumeEditor'
+import TailorView from './components/TailorView'
+import TrackerTab from './components/TrackerTab'
+import PreferencesTab from './components/PreferencesTab'
+import CredentialsTab from './components/CredentialsTab'
+import ActivityTab from './components/ActivityTab'
+
+type Tab = 'resume' | 'tailor' | 'tracker' | 'prefs' | 'creds' | 'activity'
 
 interface ResumeVersion {
   id: string
@@ -20,6 +27,7 @@ export default function Home() {
   const [current, setCurrent] = useState<ResumeVersion | null>(null)
   const [versions, setVersions] = useState<ResumeVersion[]>([])
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<Tab>('resume')
   const userIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -109,6 +117,8 @@ export default function Home() {
     window.location.reload()
   }
 
+  const resumeData = current?.parsed_data || null
+
   if (authLoading) {
     return (
       <div className="app-shell">
@@ -137,44 +147,86 @@ export default function Home() {
     )
   }
 
-  if (loading) {
-    return (
-      <div className="app-shell">
-        <header className="app-header-simple">
-          <span className="app-logo">eOS</span>
-          <span className="app-name">eOS</span>
-          <span className="app-tagline">Resume in the cloud</span>
-          <button type="button" className="secondary-button sign-out" onClick={handleSignOut}>
-            Sign out
-          </button>
-        </header>
-        <main className="app-content">
-          <p className="loading-message">Loading…</p>
-        </main>
-      </div>
-    )
-  }
-
   return (
     <div className="app-shell">
       <header className="app-header-simple">
         <span className="app-logo">eOS</span>
         <span className="app-name">eOS</span>
-        <span className="app-tagline">Resume in the cloud — edit, version, export</span>
+        <nav className="app-tabs">
+          <button
+            type="button"
+            className={`app-tab${tab === 'resume' ? ' active' : ''}`}
+            onClick={() => setTab('resume')}
+          >
+            Resume
+          </button>
+          <button
+            type="button"
+            className={`app-tab${tab === 'tailor' ? ' active' : ''}`}
+            onClick={() => setTab('tailor')}
+            disabled={!resumeData}
+            title={!resumeData ? 'Upload a resume first' : undefined}
+          >
+            Tailor
+          </button>
+          <button
+            type="button"
+            className={`app-tab${tab === 'tracker' ? ' active' : ''}`}
+            onClick={() => setTab('tracker')}
+          >
+            Tracker
+          </button>
+          <span className="app-tab-separator" />
+          <button
+            type="button"
+            className={`app-tab${tab === 'prefs' ? ' active' : ''}`}
+            onClick={() => setTab('prefs')}
+          >
+            Agent
+          </button>
+          <button
+            type="button"
+            className={`app-tab${tab === 'creds' ? ' active' : ''}`}
+            onClick={() => setTab('creds')}
+          >
+            Credentials
+          </button>
+          <button
+            type="button"
+            className={`app-tab${tab === 'activity' ? ' active' : ''}`}
+            onClick={() => setTab('activity')}
+          >
+            Activity
+          </button>
+        </nav>
         <button type="button" className="secondary-button sign-out" onClick={handleSignOut}>
           Sign out
         </button>
       </header>
       <main className="app-content">
-        {!current ? (
-          <ResumeUpload onSuccess={loadResume} />
+        {loading ? (
+          <p className="loading-message">Loading…</p>
+        ) : tab === 'resume' ? (
+          !current ? (
+            <ResumeUpload onSuccess={loadResume} />
+          ) : (
+            <ResumeEditor
+              initialData={current.parsed_data || ({} as ResumeData)}
+              versions={versions}
+              onSave={(data) => handleSave(data)}
+              onRestore={handleRestore}
+            />
+          )
+        ) : tab === 'tailor' ? (
+          <TailorView resumeData={resumeData!} onSaveVersion={handleSave} />
+        ) : tab === 'tracker' ? (
+          <TrackerTab />
+        ) : tab === 'prefs' ? (
+          <PreferencesTab />
+        ) : tab === 'creds' ? (
+          <CredentialsTab />
         ) : (
-          <ResumeEditor
-            initialData={current.parsed_data || ({} as ResumeData)}
-            versions={versions}
-            onSave={(data) => handleSave(data)}
-            onRestore={handleRestore}
-          />
+          <ActivityTab />
         )}
       </main>
     </div>

@@ -8,29 +8,28 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { searchParams } = new URL(req.url)
-    const status = searchParams.get('status')
-
-    let query = supabase
-      .from('applications')
+    const { data, error } = await supabase
+      .from('job_preferences')
       .select('*')
       .eq('user_id', user.id)
-      .order('applied_at', { ascending: false })
+      .limit(1)
+      .single()
 
-    if (status) {
-      query = query.eq('status', status)
-    }
-
-    const { data: rows, error } = await query
-
-    if (error) {
-      console.error('Supabase getApplications:', error)
+    if (error && error.code !== 'PGRST116') {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    return jsonWithCookies({ success: true, applications: rows || [] }, response)
+    return jsonWithCookies({
+      success: true,
+      preferences: data || {
+        titles: [],
+        keywords: [],
+        locations: [],
+        remote_only: false,
+        max_applications_per_run: 10,
+      },
+    }, response)
   } catch (error: any) {
-    console.error('Error getting applications:', error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
@@ -43,37 +42,31 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { title, company, url, location, status, notes } = body
-
-    if (!company) {
-      return NextResponse.json(
-        { success: false, error: 'Company is required.' },
-        { status: 400 }
-      )
-    }
+    const { titles, keywords, locations, remote_only, max_applications_per_run } = body
 
     const { data, error } = await supabase
-      .from('applications')
-      .insert({
-        user_id: user.id,
-        title: title || null,
-        company,
-        url: url || null,
-        location: location || null,
-        status: status || 'applied',
-        notes: notes || null,
-      })
+      .from('job_preferences')
+      .upsert(
+        {
+          user_id: user.id,
+          titles: titles || [],
+          keywords: keywords || [],
+          locations: locations || [],
+          remote_only: remote_only ?? false,
+          max_applications_per_run: max_applications_per_run ?? 10,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
       .select()
       .single()
 
     if (error) {
-      console.error('Supabase createApplication:', error)
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    return jsonWithCookies({ success: true, application: data }, response, 201)
+    return jsonWithCookies({ success: true, preferences: data }, response)
   } catch (error: any) {
-    console.error('Error creating application:', error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

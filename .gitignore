@@ -42,3 +42,12 @@ next-env.d.ts
 # database
 *.db
 *.db-journal
+
+# Health check
+healthcheck/history.jsonl
+healthcheck/.jscpd-report/
+
+# Python agent
+agent/venv/
+agent/__pycache__/
+*.pyc

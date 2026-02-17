@@ -19,15 +19,18 @@ export default function TrackerTab() {
   const [loading, setLoading] = useState(true)
   const draggedCardRef = useRef<HTMLElement | null>(null)
 
+  const [newTitle, setNewTitle] = useState('')
+  const [newCompany, setNewCompany] = useState('')
+  const [newUrl, setNewUrl] = useState('')
+  const [adding, setAdding] = useState(false)
+
   useEffect(() => {
     loadApplications()
-    const interval = setInterval(loadApplications, 30000)
-    return () => clearInterval(interval)
   }, [])
 
   async function loadApplications() {
     try {
-      const res = await fetch('/api/applications')
+      const res = await fetch('/api/applications', { credentials: 'include' })
       const data = await res.json()
 
       if (data.success) {
@@ -37,6 +40,35 @@ export default function TrackerTab() {
       console.error('Error loading applications:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newCompany.trim()) return
+    setAdding(true)
+    try {
+      const res = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTitle.trim() || null,
+          company: newCompany.trim(),
+          url: newUrl.trim() || null,
+        }),
+        credentials: 'include',
+      })
+      const data = await res.json()
+      if (data.success) {
+        setNewTitle('')
+        setNewCompany('')
+        setNewUrl('')
+        loadApplications()
+      }
+    } catch (error) {
+      console.error('Error adding application:', error)
+    } finally {
+      setAdding(false)
     }
   }
 
@@ -85,6 +117,7 @@ export default function TrackerTab() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
+        credentials: 'include',
       })
 
       const data = await res.json()
@@ -121,7 +154,7 @@ export default function TrackerTab() {
               if (app.url) window.open(app.url, '_blank')
             }}
           >
-            ⋯
+            ...
           </button>
         </div>
         <div className="kanban-card-company">{app.company || 'Company'}</div>
@@ -129,7 +162,7 @@ export default function TrackerTab() {
         <div className="kanban-card-date">Applied: {date}</div>
         {app.url && (
           <a href={app.url} target="_blank" rel="noopener noreferrer" className="kanban-card-link">
-            View Job →
+            View Job
           </a>
         )}
       </div>
@@ -138,11 +171,9 @@ export default function TrackerTab() {
 
   if (loading) {
     return (
-      <div className="tab-content active">
-        <section className="panel">
-          <p>Loading applications...</p>
-        </section>
-      </div>
+      <section className="panel">
+        <p className="loading-message">Loading applications...</p>
+      </section>
     )
   }
 
@@ -152,12 +183,38 @@ export default function TrackerTab() {
   })
 
   return (
-    <div className="tab-content active">
+    <div className="tracker-view">
       <section className="panel">
-        <h2>Job Application Tracker</h2>
+        <h2>Application Tracker</h2>
         <p className="panel-subtitle">
-          Track all your job applications. Drag cards between columns to update status.
+          Log every application. Drag cards between columns to update status.
         </p>
+
+        <form className="tracker-add-form" onSubmit={handleAdd}>
+          <input
+            type="text"
+            placeholder="Job title"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Company *"
+            value={newCompany}
+            onChange={(e) => setNewCompany(e.target.value)}
+            required
+          />
+          <input
+            type="url"
+            placeholder="Job URL (optional)"
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+          />
+          <button type="submit" className="primary-button" disabled={adding || !newCompany.trim()}>
+            {adding ? 'Adding…' : 'Add'}
+          </button>
+        </form>
+
         <div className="kanban-board">
           {STATUSES.map((status) => {
             const apps = grouped[status]

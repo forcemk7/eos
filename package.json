@@ -1,7 +1,7 @@
 {
   "name": "earnos",
-  "version": "0.1.0",
-  "description": "Life/work optimization platform - help users improve their work/earning configuration over time with AI-powered resume parsing and work configuration tracking.",
+  "version": "0.2.0",
+  "description": "AI-powered job application prep tool. Upload your resume, tailor it per job, generate cover letters, export PDFs, track applications.",
   "scripts": {
     "dev": "node server.js",
     "dev:next": "next dev",
@@ -12,27 +12,22 @@
   },
   "keywords": [
     "career",
-    "life-tool",
-    "calculator",
-    "experiments"
+    "resume",
+    "job-search",
+    "ai"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
-    "bullmq": "^5.0.0",
-    "ioredis": "^5.3.2",
     "jspdf": "^4.1.0",
     "mammoth": "^1.7.0",
-    "multer": "^1.4.5-lts.1",
     "next": "^14.2.0",
     "openai": "^4.0.0",
     "pdf-parse": "^1.1.1",
-    "puppeteer": "^21.5.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "sqlite3": "^5.1.6",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

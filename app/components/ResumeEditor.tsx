@@ -142,21 +142,23 @@ export default function ResumeEditor({
     <div className="resume-editor-layout">
       <div className="resume-editor-main">
         <div className="resume-editor-header">
-          <h1 className="resume-editor-title">Resume</h1>
-          <p className="resume-editor-subtitle">
-            Edit below. Save creates a new version so you can always go back. One account = one resume, synced across devices.
-          </p>
+          <div className="resume-editor-header-text">
+            <h1 className="resume-editor-title">Resume</h1>
+            <p className="resume-editor-subtitle">
+              Edit below. Save creates a new version so you can always go back.
+            </p>
+          </div>
           <div className="resume-editor-actions">
-            <button type="button" className="primary-button save-button" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : 'Save new version'}
+            <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save version'}
             </button>
-            <button type="button" className="secondary-button export-pdf-button" onClick={handleExportPdf}>
+            <button type="button" className="secondary-button" onClick={handleExportPdf}>
               Export PDF
             </button>
           </div>
         </div>
 
-        <section className="resume-section panel">
+        <section className="resume-section">
           <h2 className="resume-section-title">Contact</h2>
           <div className="resume-fields">
             <div className="field-group">
@@ -198,7 +200,7 @@ export default function ResumeEditor({
           </div>
         </section>
 
-        <section className="resume-section panel">
+        <section className="resume-section">
           <h2 className="resume-section-title">Summary</h2>
           <textarea
             className="resume-summary-input"
@@ -209,7 +211,7 @@ export default function ResumeEditor({
           />
         </section>
 
-        <section className="resume-section panel">
+        <section className="resume-section">
           <div className="resume-section-head">
             <h2 className="resume-section-title">Experience</h2>
             <button type="button" className="secondary-button" onClick={addExperience}>
@@ -255,7 +257,7 @@ export default function ResumeEditor({
           ))}
         </section>
 
-        <section className="resume-section panel">
+        <section className="resume-section">
           <h2 className="resume-section-title">Skills</h2>
           <input
             type="text"
