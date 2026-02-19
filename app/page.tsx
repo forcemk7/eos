@@ -6,13 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import AuthForm from './components/AuthForm'
 import ResumeUpload from './components/ResumeUpload'
 import ResumeEditor, { ResumeData } from './components/ResumeEditor'
-import TailorView from './components/TailorView'
-import TrackerTab from './components/TrackerTab'
-import PreferencesTab from './components/PreferencesTab'
-import CredentialsTab from './components/CredentialsTab'
-import ActivityTab from './components/ActivityTab'
+import DataTab from './components/DataTab'
 
-type Tab = 'resume' | 'tailor' | 'tracker' | 'prefs' | 'creds' | 'activity'
+type Tab = 'data' | 'resume'
 
 interface ResumeVersion {
   id: string
@@ -27,7 +23,7 @@ export default function Home() {
   const [current, setCurrent] = useState<ResumeVersion | null>(null)
   const [versions, setVersions] = useState<ResumeVersion[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<Tab>('resume')
+  const [tab, setTab] = useState<Tab>('data')
   const userIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -155,48 +151,17 @@ export default function Home() {
         <nav className="app-tabs">
           <button
             type="button"
+            className={`app-tab${tab === 'data' ? ' active' : ''}`}
+            onClick={() => setTab('data')}
+          >
+            Data
+          </button>
+          <button
+            type="button"
             className={`app-tab${tab === 'resume' ? ' active' : ''}`}
             onClick={() => setTab('resume')}
           >
             Resume
-          </button>
-          <button
-            type="button"
-            className={`app-tab${tab === 'tailor' ? ' active' : ''}`}
-            onClick={() => setTab('tailor')}
-            disabled={!resumeData}
-            title={!resumeData ? 'Upload a resume first' : undefined}
-          >
-            Tailor
-          </button>
-          <button
-            type="button"
-            className={`app-tab${tab === 'tracker' ? ' active' : ''}`}
-            onClick={() => setTab('tracker')}
-          >
-            Tracker
-          </button>
-          <span className="app-tab-separator" />
-          <button
-            type="button"
-            className={`app-tab${tab === 'prefs' ? ' active' : ''}`}
-            onClick={() => setTab('prefs')}
-          >
-            Agent
-          </button>
-          <button
-            type="button"
-            className={`app-tab${tab === 'creds' ? ' active' : ''}`}
-            onClick={() => setTab('creds')}
-          >
-            Credentials
-          </button>
-          <button
-            type="button"
-            className={`app-tab${tab === 'activity' ? ' active' : ''}`}
-            onClick={() => setTab('activity')}
-          >
-            Activity
           </button>
         </nav>
         <button type="button" className="secondary-button sign-out" onClick={handleSignOut}>
@@ -206,6 +171,12 @@ export default function Home() {
       <main className="app-content">
         {loading ? (
           <p className="loading-message">Loading…</p>
+        ) : tab === 'data' ? (
+          <DataTab
+            initialData={current?.parsed_data ?? null}
+            onSave={(data) => handleSave(data)}
+            onDataChange={loadResume}
+          />
         ) : tab === 'resume' ? (
           !current ? (
             <ResumeUpload onSuccess={loadResume} />
@@ -217,17 +188,7 @@ export default function Home() {
               onRestore={handleRestore}
             />
           )
-        ) : tab === 'tailor' ? (
-          <TailorView resumeData={resumeData!} onSaveVersion={handleSave} />
-        ) : tab === 'tracker' ? (
-          <TrackerTab />
-        ) : tab === 'prefs' ? (
-          <PreferencesTab />
-        ) : tab === 'creds' ? (
-          <CredentialsTab />
-        ) : (
-          <ActivityTab />
-        )}
+        ) : null}
       </main>
     </div>
   )

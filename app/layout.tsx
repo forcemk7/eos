@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'eOS – Get hired faster',
-  description: 'AI-powered job application prep. Tailor your resume per job, generate cover letters, export PDFs, track applications.',
+  description: 'Resume builder: digitize, improve with AI suggestions, real-time layouts. Job search and AI coach coming next.',
 }
 
 export default function RootLayout({

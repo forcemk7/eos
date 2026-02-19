@@ -2,45 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { exportResumeToPdf } from '@/lib/exportResumePdf'
+import { applyResumeSuggestion, type ResumeSuggestion } from '@/lib/applyResumeSuggestion'
+import ResumePreview, { TEMPLATE_IDS, type TemplateId } from './ResumePreview'
+import type { ResumeData } from '@/lib/profile'
+import { normalizedResumeData, genId } from '@/lib/profile'
 
-export interface ResumeData {
-  identity: {
-    name: string
-    email: string
-    location: string
-    links: string[]
-  }
-  summary: string
-  experience: Array<{
-    title: string
-    company: string
-    dates: string
-    bullets: string[]
-  }>
-  skills: string[]
-}
+export type { ResumeData }
 
-function emptyResume(): ResumeData {
-  return {
-    identity: { name: '', email: '', location: '', links: [] },
-    summary: '',
-    experience: [],
-    skills: [],
-  }
-}
-
-function normalizeParsed(parsed: any): ResumeData {
-  return {
-    identity: {
-      name: parsed?.identity?.name ?? '',
-      email: parsed?.identity?.email ?? '',
-      location: parsed?.identity?.location ?? '',
-      links: Array.isArray(parsed?.identity?.links) ? parsed.identity.links : [],
-    },
-    summary: typeof parsed?.summary === 'string' ? parsed.summary : '',
-    experience: Array.isArray(parsed?.experience) ? parsed.experience : [],
-    skills: Array.isArray(parsed?.skills) ? parsed.skills : [],
-  }
+/** Section key for grouping suggestions: identity | summary | skills | experience-0, experience-1, ... */
+function sectionForPath(path: string): string {
+  if (path.startsWith('identity.')) return 'identity'
+  if (path === 'summary') return 'summary'
+  if (path === 'skills') return 'skills'
+  const m = path.match(/^experience\.(\d+)/)
+  return m ? `experience-${m[1]}` : 'other'
 }
 
 interface VersionItem {
@@ -62,16 +37,59 @@ export default function ResumeEditor({
   onSave,
   onRestore,
 }: ResumeEditorProps) {
-  const [data, setData] = useState<ResumeData>(() => normalizeParsed(initialData))
+  const [data, setData] = useState<ResumeData>(() => normalizedResumeData(initialData))
   const [saving, setSaving] = useState(false)
   const [restoringId, setRestoringId] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<ResumeSuggestion[]>([])
+  const [suggestLoading, setSuggestLoading] = useState(true)
+  const [activeTemplate, setActiveTemplate] = useState<TemplateId>('classic')
 
   useEffect(() => {
-    setData(normalizeParsed(initialData))
+    setData(normalizedResumeData(initialData))
   }, [initialData])
 
-  function updateIdentity(field: keyof ResumeData['identity'], value: string | string[]) {
+  // Auto-fetch suggestions when editor loads or data is restored
+  useEffect(() => {
+    setSuggestLoading(true)
+    const payload = normalizedResumeData(initialData)
+    fetch('/api/resume/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resumeData: payload }),
+      credentials: 'include',
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.suggestions)) setSuggestions(json.suggestions)
+      })
+      .finally(() => setSuggestLoading(false))
+  }, [initialData])
+
+  function updateIdentity(field: keyof Omit<ResumeData['identity'], 'links'>, value: string) {
     setData((d) => ({ ...d, identity: { ...d.identity, [field]: value } }))
+  }
+  function updateLink(index: number, field: 'label' | 'url', value: string) {
+    setData((d) => {
+      const links = [...(d.identity.links ?? [])]
+      if (!links[index]) return d
+      links[index] = { ...links[index], [field]: value }
+      return { ...d, identity: { ...d.identity, links } }
+    })
+  }
+  function addLink() {
+    setData((d) => ({
+      ...d,
+      identity: { ...d.identity, links: [...(d.identity.links ?? []), { label: '', url: '' }] },
+    }))
+  }
+  function removeLink(index: number) {
+    setData((d) => ({
+      ...d,
+      identity: {
+        ...d.identity,
+        links: (d.identity.links ?? []).filter((_, i) => i !== index),
+      },
+    }))
   }
 
   function updateSummary(value: string) {
@@ -82,7 +100,19 @@ export default function ResumeEditor({
     setData((d) => {
       const next = [...d.experience]
       if (!next[index]) return d
-      ;(next[index] as any)[field] = value
+      if (field === 'bullets') {
+        const texts = (value as string[]).filter((s) => s.trim())
+        next[index] = {
+          ...next[index],
+          bullets: texts.map((text, j) => ({
+            id: next[index].bullets[j]?.id ?? genId(),
+            text,
+            sort_order: j,
+          })),
+        }
+      } else {
+        ;(next[index] as any)[field] = value
+      }
       return { ...d, experience: next }
     })
   }
@@ -90,7 +120,17 @@ export default function ResumeEditor({
   function addExperience() {
     setData((d) => ({
       ...d,
-      experience: [...d.experience, { title: '', company: '', dates: '', bullets: [] }],
+      experience: [
+        ...d.experience,
+        {
+          id: genId(),
+          title: '',
+          company: '',
+          dates: '',
+          sort_order: d.experience.length,
+          bullets: [],
+        },
+      ],
     }))
   }
 
@@ -101,8 +141,15 @@ export default function ResumeEditor({
     }))
   }
 
-  function updateSkills(value: string[]) {
-    setData((d) => ({ ...d, skills: value }))
+  function updateSkills(names: string[]) {
+    setData((d) => ({
+      ...d,
+      skills: names.map((name, i) => ({
+        id: d.skills[i]?.id ?? genId(),
+        name,
+        sort_order: i,
+      })),
+    }))
   }
 
   async function handleSave() {
@@ -123,12 +170,51 @@ export default function ResumeEditor({
     }
   }
 
-  function handleExportPdf() {
-    const name = (data.identity.name || 'resume').trim().replace(/\s+/g, '-') || 'resume'
-    exportResumeToPdf(data, `${name}-resume.pdf`)
+  function handleAcceptSuggestion(s: ResumeSuggestion) {
+    setData((d) => applyResumeSuggestion(d, { path: s.path, suggestedValue: s.suggestedValue }))
+    setSuggestions((list) => list.filter((x) => x.id !== s.id))
   }
 
-  const skillsStr = data.skills.join(', ')
+  function handleRejectSuggestion(s: ResumeSuggestion) {
+    setSuggestions((list) => list.filter((x) => x.id !== s.id))
+  }
+
+  function handleExportPdf() {
+    const name = (data.identity.name || 'resume').trim().replace(/\s+/g, '-') || 'resume'
+    exportResumeToPdf(data, `${name}-${activeTemplate}.pdf`, activeTemplate)
+  }
+
+  const skillsStr = data.skills.map((s) => s.name).join(', ')
+  const suggestionsBySection = (sectionKey: string) =>
+    suggestions.filter((s) => sectionForPath(s.path) === sectionKey)
+
+  function InlineSuggestions({ sectionKey }: { sectionKey: string }) {
+    const list = suggestionsBySection(sectionKey)
+    if (list.length === 0) return null
+    return (
+      <ul className="resume-suggestions-inline">
+        {list.map((s) => (
+          <li key={s.id} className="resume-suggestion-item">
+            <div className="resume-suggestion-reason">{s.reason}</div>
+            <div className="resume-suggestion-diff">
+              <span className="resume-suggestion-current">{s.currentValue || '(empty)'}</span>
+              <span className="resume-suggestion-arrow">→</span>
+              <span className="resume-suggestion-new">{s.suggestedValue}</span>
+            </div>
+            <div className="resume-suggestion-actions">
+              <button type="button" className="primary-button small" onClick={() => handleAcceptSuggestion(s)}>
+                Accept
+              </button>
+              <button type="button" className="secondary-button small" onClick={() => handleRejectSuggestion(s)}>
+                Reject
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
   const formatVersionDate = (created_at: string) => {
     try {
       const d = new Date(created_at)
@@ -145,7 +231,7 @@ export default function ResumeEditor({
           <div className="resume-editor-header-text">
             <h1 className="resume-editor-title">Resume</h1>
             <p className="resume-editor-subtitle">
-              Edit below. Save creates a new version so you can always go back.
+              Edit below. Save creates a new version. Switch layout to see the same data in different styles.
             </p>
           </div>
           <div className="resume-editor-actions">
@@ -180,6 +266,15 @@ export default function ResumeEditor({
               />
             </div>
             <div className="field-group">
+              <label>Phone</label>
+              <input
+                type="text"
+                value={data.identity.phone}
+                onChange={(e) => updateIdentity('phone', e.target.value)}
+                placeholder="+1 234 567 8900"
+              />
+            </div>
+            <div className="field-group">
               <label>Location</label>
               <input
                 type="text"
@@ -189,15 +284,38 @@ export default function ResumeEditor({
               />
             </div>
             <div className="field-group">
-              <label>Links (one per line)</label>
-              <textarea
-                value={data.identity.links.join('\n')}
-                onChange={(e) => updateIdentity('links', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))}
-                placeholder="https://linkedin.com/..."
-                rows={2}
-              />
+              <div className="field-group-row">
+                <label>Links</label>
+                <button type="button" className="secondary-button small" onClick={addLink}>
+                  + Add link
+                </button>
+              </div>
+              {(data.identity.links ?? []).map((link, i) => (
+                <div key={i} className="field-group link-row">
+                  <input
+                    type="text"
+                    value={link.label}
+                    onChange={(e) => updateLink(i, 'label', e.target.value)}
+                    placeholder="Label"
+                  />
+                  <input
+                    type="url"
+                    value={link.url}
+                    onChange={(e) => updateLink(i, 'url', e.target.value)}
+                    placeholder="https://..."
+                  />
+                  <button type="button" className="small" onClick={() => removeLink(i)} title="Remove">
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
+          {suggestLoading && suggestions.length === 0 ? (
+            <p className="resume-suggestions-loading">Loading suggestions…</p>
+          ) : (
+            <InlineSuggestions sectionKey="identity" />
+          )}
         </section>
 
         <section className="resume-section">
@@ -209,6 +327,7 @@ export default function ResumeEditor({
             placeholder="Brief professional summary…"
             rows={4}
           />
+          {!suggestLoading && <InlineSuggestions sectionKey="summary" />}
         </section>
 
         <section className="resume-section">
@@ -244,8 +363,14 @@ export default function ResumeEditor({
                 className="resume-exp-dates"
               />
               <textarea
-                value={(exp.bullets || []).join('\n')}
-                onChange={(e) => updateExperience(i, 'bullets', e.target.value.split('\n').filter((s) => s.trim()))}
+                value={(exp.bullets || []).map((b) => b.text).join('\n')}
+                onChange={(e) =>
+                  updateExperience(
+                    i,
+                    'bullets',
+                    e.target.value.split('\n').map((s) => s.trim()).filter(Boolean)
+                  )
+                }
                 placeholder="Bullet points, one per line"
                 rows={3}
                 className="resume-exp-bullets"
@@ -253,6 +378,7 @@ export default function ResumeEditor({
               <button type="button" className="secondary-button small remove-exp" onClick={() => removeExperience(i)}>
                 Remove
               </button>
+              {!suggestLoading && <InlineSuggestions sectionKey={`experience-${i}`} />}
             </div>
           ))}
         </section>
@@ -262,34 +388,61 @@ export default function ResumeEditor({
           <input
             type="text"
             value={skillsStr}
-            onChange={(e) => updateSkills(e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+            onChange={(e) =>
+              updateSkills(
+                e.target.value
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              )
+            }
             placeholder="React, TypeScript, Python, ..."
             className="resume-skills-input"
           />
+          {!suggestLoading && <InlineSuggestions sectionKey="skills" />}
         </section>
       </div>
 
-      <aside className="resume-versions panel">
-        <h2 className="resume-section-title">Version history</h2>
-        <p className="resume-versions-hint">Each save is a new version. Restore loads that version into the editor.</p>
-        <ul className="resume-versions-list">
-          {versions.map((v) => (
-            <li key={v.id} className="resume-version-item">
-              <div className="resume-version-meta">
-                <span className="resume-version-date">{formatVersionDate(v.created_at)}</span>
-                {v.file_name && <span className="resume-version-file">{v.file_name}</span>}
-              </div>
+      <aside className="resume-editor-aside">
+        <div className="resume-preview-wrap panel">
+          <div className="resume-preview-tabs">
+            {TEMPLATE_IDS.map((id) => (
               <button
+                key={id}
                 type="button"
-                className="secondary-button small"
-                onClick={() => handleRestore(v.id)}
-                disabled={restoringId === v.id}
+                className={`resume-preview-tab ${activeTemplate === id ? 'active' : ''}`}
+                onClick={() => setActiveTemplate(id)}
               >
-                {restoringId === v.id ? '…' : 'Restore'}
+                {id === 'classic' ? 'Classic' : 'Compact'}
               </button>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </div>
+          <div className="resume-preview-frame">
+            <ResumePreview data={data} templateId={activeTemplate} />
+          </div>
+        </div>
+        <div className="resume-versions panel">
+          <h2 className="resume-section-title">Version history</h2>
+          <p className="resume-versions-hint">Each save is a new version. Restore loads that version into the editor.</p>
+          <ul className="resume-versions-list">
+            {versions.map((v) => (
+              <li key={v.id} className="resume-version-item">
+                <div className="resume-version-meta">
+                  <span className="resume-version-date">{formatVersionDate(v.created_at)}</span>
+                  {v.file_name && <span className="resume-version-file">{v.file_name}</span>}
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button small"
+                  onClick={() => handleRestore(v.id)}
+                  disabled={restoringId === v.id}
+                >
+                  {restoringId === v.id ? '…' : 'Restore'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </aside>
     </div>
   )

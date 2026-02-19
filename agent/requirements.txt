@@ -1,6 +1,0 @@
-browser-use
-playwright
-langchain-openai
-supabase
-cryptography
-python-dotenv

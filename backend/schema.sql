@@ -33,6 +33,253 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- ── Profile-centric model: DB = source of truth, resume = view ─────────────────
+-- Categories (single-word): Contact, Summary, Experience, Education, Achievements,
+-- Skills, Languages, Additional. One profile per user; order via sort_order.
+--
+-- Schema mapping:
+--   Contact     → profiles.identity (name, email, phone, location, links)
+--   Summary     → profiles.summary
+--   Additional  → profiles.additional
+--   Experience  → experience + bullets
+--   Education   → education
+--   Achievements→ achievements
+--   Skills      → skills
+--   Languages   → languages
+
+-- Migrate single-label renames (run once for existing deployments)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'work_experiences') THEN
+    ALTER TABLE work_experiences RENAME TO experience;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'bullets' AND column_name = 'work_experience_id') THEN
+    ALTER TABLE bullets RENAME COLUMN work_experience_id TO experience_id;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'additional_sections') THEN
+    ALTER TABLE profiles RENAME COLUMN additional_sections TO additional;
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS profiles (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  identity JSONB NOT NULL DEFAULT '{"name":"","email":"","phone":"","location":"","links":[]}',
+  summary TEXT NOT NULL DEFAULT '',
+  additional JSONB NOT NULL DEFAULT '[]',
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'additional') THEN
+    ALTER TABLE profiles ADD COLUMN additional JSONB NOT NULL DEFAULT '[]';
+  END IF;
+END $$;
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'profiles_select_own' AND tablename = 'profiles') THEN
+    CREATE POLICY "profiles_select_own" ON profiles FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'profiles_insert_own' AND tablename = 'profiles') THEN
+    CREATE POLICY "profiles_insert_own" ON profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'profiles_update_own' AND tablename = 'profiles') THEN
+    CREATE POLICY "profiles_update_own" ON profiles FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Experience: one row per position; bullets = accomplishments per position
+CREATE TABLE IF NOT EXISTS experience (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  company TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL DEFAULT '',
+  dates TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_experience_user_id ON experience(user_id);
+CREATE INDEX IF NOT EXISTS idx_experience_user_sort ON experience(user_id, sort_order);
+
+ALTER TABLE experience ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'experience_select_own' AND tablename = 'experience') THEN
+    CREATE POLICY "experience_select_own" ON experience FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'experience_insert_own' AND tablename = 'experience') THEN
+    CREATE POLICY "experience_insert_own" ON experience FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'experience_update_own' AND tablename = 'experience') THEN
+    CREATE POLICY "experience_update_own" ON experience FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'experience_delete_own' AND tablename = 'experience') THEN
+    CREATE POLICY "experience_delete_own" ON experience FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Bullets: accomplishments per experience row
+CREATE TABLE IF NOT EXISTS bullets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  experience_id UUID NOT NULL REFERENCES experience(id) ON DELETE CASCADE,
+  text TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bullets_experience_id ON bullets(experience_id);
+CREATE INDEX IF NOT EXISTS idx_bullets_experience_sort ON bullets(experience_id, sort_order);
+
+ALTER TABLE bullets ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'bullets_select_own' AND tablename = 'bullets') THEN
+    CREATE POLICY "bullets_select_own" ON bullets FOR SELECT USING (
+      EXISTS (SELECT 1 FROM experience e WHERE e.id = bullets.experience_id AND e.user_id = auth.uid())
+    );
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'bullets_insert_own' AND tablename = 'bullets') THEN
+    CREATE POLICY "bullets_insert_own" ON bullets FOR INSERT WITH CHECK (
+      EXISTS (SELECT 1 FROM experience e WHERE e.id = bullets.experience_id AND e.user_id = auth.uid())
+    );
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'bullets_update_own' AND tablename = 'bullets') THEN
+    CREATE POLICY "bullets_update_own" ON bullets FOR UPDATE USING (
+      EXISTS (SELECT 1 FROM experience e WHERE e.id = bullets.experience_id AND e.user_id = auth.uid())
+    );
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'bullets_delete_own' AND tablename = 'bullets') THEN
+    CREATE POLICY "bullets_delete_own" ON bullets FOR DELETE USING (
+      EXISTS (SELECT 1 FROM experience e WHERE e.id = bullets.experience_id AND e.user_id = auth.uid())
+    );
+  END IF;
+END $$;
+
+-- Skills: one row per skill
+CREATE TABLE IF NOT EXISTS skills (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_skills_user_id ON skills(user_id);
+CREATE INDEX IF NOT EXISTS idx_skills_user_sort ON skills(user_id, sort_order);
+
+ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'skills_select_own' AND tablename = 'skills') THEN
+    CREATE POLICY "skills_select_own" ON skills FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'skills_insert_own' AND tablename = 'skills') THEN
+    CREATE POLICY "skills_insert_own" ON skills FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'skills_update_own' AND tablename = 'skills') THEN
+    CREATE POLICY "skills_update_own" ON skills FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'skills_delete_own' AND tablename = 'skills') THEN
+    CREATE POLICY "skills_delete_own" ON skills FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Education: one row per degree/credential
+CREATE TABLE IF NOT EXISTS education (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  institution TEXT NOT NULL DEFAULT '',
+  degree TEXT NOT NULL DEFAULT '',
+  field_of_study TEXT NOT NULL DEFAULT '',
+  dates TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_education_user_id ON education(user_id);
+CREATE INDEX IF NOT EXISTS idx_education_user_sort ON education(user_id, sort_order);
+
+ALTER TABLE education ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'education_select_own' AND tablename = 'education') THEN
+    CREATE POLICY "education_select_own" ON education FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'education_insert_own' AND tablename = 'education') THEN
+    CREATE POLICY "education_insert_own" ON education FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'education_update_own' AND tablename = 'education') THEN
+    CREATE POLICY "education_update_own" ON education FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'education_delete_own' AND tablename = 'education') THEN
+    CREATE POLICY "education_delete_own" ON education FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Languages: one row per language + level
+CREATE TABLE IF NOT EXISTS languages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  language TEXT NOT NULL DEFAULT '',
+  level TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_languages_user_id ON languages(user_id);
+CREATE INDEX IF NOT EXISTS idx_languages_user_sort ON languages(user_id, sort_order);
+
+ALTER TABLE languages ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'languages_select_own' AND tablename = 'languages') THEN
+    CREATE POLICY "languages_select_own" ON languages FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'languages_insert_own' AND tablename = 'languages') THEN
+    CREATE POLICY "languages_insert_own" ON languages FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'languages_update_own' AND tablename = 'languages') THEN
+    CREATE POLICY "languages_update_own" ON languages FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'languages_delete_own' AND tablename = 'languages') THEN
+    CREATE POLICY "languages_delete_own" ON languages FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Achievements: one row per award/certification
+CREATE TABLE IF NOT EXISTS achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT '',
+  issuer TEXT NOT NULL DEFAULT '',
+  date TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_achievements_user_id ON achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_achievements_user_sort ON achievements(user_id, sort_order);
+
+ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'achievements_select_own' AND tablename = 'achievements') THEN
+    CREATE POLICY "achievements_select_own" ON achievements FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'achievements_insert_own' AND tablename = 'achievements') THEN
+    CREATE POLICY "achievements_insert_own" ON achievements FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'achievements_update_own' AND tablename = 'achievements') THEN
+    CREATE POLICY "achievements_update_own" ON achievements FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'achievements_delete_own' AND tablename = 'achievements') THEN
+    CREATE POLICY "achievements_delete_own" ON achievements FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
 -- Applications tracker
 CREATE TABLE IF NOT EXISTS applications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

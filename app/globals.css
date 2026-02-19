@@ -220,6 +220,29 @@ html, body {
   margin-bottom: 16px;
 }
 
+.field-group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.field-group .link-row {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.field-group .link-row input {
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
 .field-group label {
   display: block;
   margin-bottom: 6px;
@@ -398,13 +421,586 @@ textarea::placeholder {
   color: var(--danger);
 }
 
+/* ── Data tab ───────────────────────────────────────────── */
+
+.data-tab {
+  max-width: var(--content-max);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.data-upload .data-section-title,
+.data-content .data-section-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.data-section-hint {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.data-dropzone {
+  position: relative;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  padding: 28px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.data-dropzone:hover {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.data-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.data-dropzone-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.data-paste {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.data-paste-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.data-paste-input::placeholder {
+  color: var(--text-muted);
+}
+
+.data-upload-status {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.data-upload-error {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--danger);
+}
+
+/* Compact upload: single row */
+.data-upload-compact {
+  padding: 12px 0 0;
+}
+.data-upload-compact .data-upload-status,
+.data-upload-compact .data-upload-error {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+.data-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.data-dropzone-compact {
+  position: relative;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.data-dropzone-compact:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.data-upload-sep {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.data-paste-inline {
+  flex: 1;
+  min-width: 140px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.data-paste-inline::placeholder {
+  color: var(--text-muted);
+}
+.data-parse-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.data-content-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.data-content-head .data-section-title {
+  margin: 0;
+}
+.data-content-head .data-actions {
+  margin-bottom: 0;
+}
+
+.data-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.data-tab-btn {
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.data-tab-btn:hover {
+  color: var(--text);
+}
+.data-tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.data-tab-panels {
+  min-height: 120px;
+}
+
+.data-chunk-edu-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr minmax(100px, 0.8fr) 100px auto;
+  gap: 10px;
+  align-items: center;
+}
+.data-chunk-ach-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 100px auto;
+  gap: 10px;
+  align-items: center;
+}
+.data-chunk-edu-row input,
+.data-chunk-ach-row input {
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.data-chunk-dates {
+  min-width: 0;
+}
+.data-chunk-education + .data-chunk-education,
+.data-chunk-achievement + .data-chunk-achievement {
+  margin-top: 8px;
+}
+
+.data-chunk-links-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.data-chunk-field-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.data-chunk-link-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.data-chunk-link-row .data-chunk-remove {
+  margin-left: 4px;
+}
+.data-chunk-link-label {
+  min-width: 0;
+}
+.data-chunk-link-url {
+  min-width: 0;
+}
+
+.data-chunk-lang-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.data-chunk-lang-row input {
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.data-chunk-lang-level {
+  min-width: 0;
+}
+.data-chunk-language + .data-chunk-language {
+  margin-top: 8px;
+}
+
+.data-additional-hint {
+  margin-bottom: 12px;
+}
+.data-chunk-additional {
+  margin-bottom: 16px;
+}
+.data-chunk-additional-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.data-chunk-additional-title {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.data-chunk-additional-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.data-chunk-additional-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.data-chunk-additional-item input {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .data-chunk-edu-row {
+    grid-template-columns: 1fr 1fr auto;
+  }
+  .data-chunk-edu-row .data-chunk-dates {
+    grid-column: 1 / -1;
+  }
+  .data-chunk-ach-row {
+    grid-template-columns: 1fr auto;
+  }
+  .data-chunk-ach-row input:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+.data-empty-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.data-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.data-chunk-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Granular chunks layout */
+.data-granular {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.data-chunk-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.data-chunk-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.data-chunk-group-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.data-chunk-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.data-chunk-contact {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.data-chunk-contact .data-chunk-field:last-of-type {
+  grid-column: 1 / -1;
+}
+
+.data-chunk-field label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.data-chunk-field input,
+.data-chunk-field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.data-chunk-summary {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.data-chunk-experience {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.data-chunk-exp-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-chunk-exp-title {
+  flex: 1;
+  min-width: 120px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.data-chunk-exp-company {
+  flex: 1;
+  min-width: 120px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.data-chunk-exp-dates {
+  width: 140px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.data-chunk-remove {
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  border-radius: var(--radius);
+  line-height: 1;
+}
+
+.data-chunk-remove:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.data-chunk-remove.small {
+  padding: 2px 6px;
+  font-size: 1rem;
+}
+
+.data-chunk-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 0;
+}
+
+.data-chunk-bullets-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.data-chunk-bullet-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.data-chunk-bullet-input {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.data-chunk-add-bullet {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.data-chunk-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.data-chunk-skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.data-chunk-skill-input {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 0;
+  min-width: 60px;
+  max-width: 140px;
+}
+
+.data-chunk-skill-input:focus {
+  outline: none;
+}
+
+.data-chunk-skill-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.data-chunk-skill-add-input {
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.85rem;
+  width: 120px;
+}
+
+.data-chunk-skill-add-input::placeholder {
+  color: var(--text-muted);
+}
+
 /* ── Resume Editor ─────────────────────────────────────── */
 
 .resume-editor-layout {
   display: grid;
-  grid-template-columns: 1fr 260px;
+  grid-template-columns: 1fr 340px;
   gap: 24px;
-  max-width: var(--content-max);
+  max-width: 1200px;
 }
 
 .resume-editor-main {
@@ -445,6 +1041,71 @@ textarea::placeholder {
   gap: 8px;
   align-items: center;
   flex-shrink: 0;
+}
+
+/* Inline suggestions per section */
+.resume-suggestions-loading {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.resume-suggestions-inline {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resume-suggestion-item {
+  padding: 12px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.resume-suggestion-reason {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.resume-suggestion-diff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.resume-suggestion-current {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resume-suggestion-arrow {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.resume-suggestion-new {
+  color: var(--text);
+}
+
+.resume-suggestion-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.resume-suggestion-actions .small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
 }
 
 /* Section panels inside the editor */
@@ -535,11 +1196,164 @@ textarea::placeholder {
   background: var(--danger-bg);
 }
 
-/* Version history sidebar */
-.resume-versions {
-  height: fit-content;
+/* Editor aside: preview + version history */
+.resume-editor-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.resume-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.resume-preview-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.resume-preview-tab {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.resume-preview-tab:hover {
+  color: var(--text);
+  border-color: var(--border-focus);
+}
+
+.resume-preview-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.resume-preview-frame {
+  background: #fff;
+  color: #111;
+  border-radius: var(--radius);
+  overflow: auto;
+  min-height: 360px;
+  aspect-ratio: 210 / 297;
+  max-height: 520px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.resume-preview {
+  padding: 20px 24px;
+  font-size: 10px;
+  line-height: 1.4;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.resume-preview-name {
+  margin: 0 0 6px;
+  font-size: 1.6em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.resume-preview-contact {
+  margin: 0 0 12px;
+  font-size: 0.9em;
+  color: #444;
+}
+
+.resume-preview-heading {
+  margin: 0 0 6px;
+  font-size: 1em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #333;
+}
+
+.resume-preview-section {
+  margin-bottom: 12px;
+}
+
+.resume-preview-summary,
+.resume-preview-skills {
+  margin: 0;
+  font-size: 0.95em;
+}
+
+.resume-preview-exp {
+  margin-bottom: 10px;
+}
+
+.resume-preview-exp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.resume-preview-exp-title {
+  font-weight: 700;
+  font-size: 1em;
+}
+
+.resume-preview-exp-dates {
+  font-size: 0.85em;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.resume-preview-bullets {
+  margin: 0 0 0 12px;
+  padding: 0;
+  list-style: disc;
+}
+
+.resume-preview-bullets li {
+  margin-bottom: 2px;
+}
+
+/* Compact: sidebar + main */
+.resume-preview-compact {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 16px;
+}
+
+.resume-preview-compact .resume-preview-sidebar {
+  border-right: 1px solid #e5e7eb;
+  padding-right: 12px;
+}
+
+.resume-preview-compact .resume-preview-name {
+  font-size: 1.3em;
+}
+
+.resume-preview-compact .resume-preview-contact {
+  font-size: 0.8em;
+}
+
+.resume-preview-compact .resume-preview-main .resume-preview-section {
+  margin-bottom: 10px;
+}
+
+/* Version history */
+.resume-editor-aside .resume-versions {
   position: sticky;
   top: 32px;
+}
+
+.resume-versions {
+  height: fit-content;
 }
 
 .resume-versions-hint {

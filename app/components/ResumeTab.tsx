@@ -28,7 +28,17 @@ function parsedToMaster(parsed: any): MasterResume {
       name: parsed?.identity?.name || '',
       email: parsed?.identity?.email || '',
       location: parsed?.identity?.location || '',
-      links: Array.isArray(parsed?.identity?.links) ? parsed.identity.links : [],
+      links: (() => {
+        const raw = parsed?.identity?.links
+        if (!Array.isArray(raw)) return []
+        return raw.map((item: unknown) => {
+          if (item && typeof item === 'object' && item !== null && 'url' in item) {
+            const o = item as { label?: string; url?: string }
+            return { label: typeof o.label === 'string' ? o.label : '', url: typeof o.url === 'string' ? o.url : '' }
+          }
+          return { label: '', url: typeof item === 'string' ? item : '' }
+        })
+      })(),
     },
     summary: parsed?.summary || '',
     experience: Array.isArray(parsed?.experience) ? parsed.experience : [],
@@ -233,7 +243,12 @@ export default function ResumeTab() {
                     : ''}
                   {masterResume.identity?.links && masterResume.identity.links.length
                     ? `${masterResume.identity?.email || masterResume.identity?.location ? ' • ' : ''}${masterResume.identity.links
-                        .map((l) => `<a href="${escapeHtml(l)}" target="_blank">${escapeHtml(l)}</a>`)
+                        .map((l) => {
+                          const url = typeof l === 'string' ? l : l.url
+                          const text = (typeof l === 'string' ? l : (l.label || l.url))
+                          return url ? `<a href="${escapeHtml(url)}" target="_blank">${escapeHtml(text)}</a>` : ''
+                        })
+                        .filter(Boolean)
                         .join(' • ')}`
                     : ''}
                 </div>
