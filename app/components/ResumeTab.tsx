@@ -8,7 +8,7 @@ interface MasterResume {
     name: string
     email: string
     location: string
-    links: string[]
+    links: { label: string; url: string }[]
   }
   summary: string
   experience: Array<{
