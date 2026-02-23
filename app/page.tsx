@@ -28,7 +28,8 @@ export default function Home() {
   const [dataIncompleteCount, setDataIncompleteCount] = useState(0)
   const userIdRef = useRef<string | null>(null)
 
-  const totalIncomplete = dataIncompleteCount
+  const resumeIncompleteCount = current ? 0 : 1
+  const totalIncomplete = dataIncompleteCount + resumeIncompleteCount
 
   useEffect(() => {
     let mounted = true
@@ -198,7 +199,7 @@ export default function Home() {
             <button
               type="button"
               className="dashboard-incomplete-view"
-              onClick={() => setTab('data')}
+              onClick={() => setTab(dataIncompleteCount >= resumeIncompleteCount ? 'data' : 'resume')}
             >
               View
             </button>

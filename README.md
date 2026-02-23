@@ -1,8 +1,8 @@
-## eOS – Resume builder (job search + AI coach next)
+## eOS – Get hired faster
 
-**Goal:** Build something that gets used every job-search session and compounds into an offer. Resume builder is the foundation; job search + apply is where the needle moves; AI coach makes the whole flow less painful.
+**Goal:** Build something that gets used every job-search session and compounds into an offer. Conceptual order: **Data** (base) → **Jobs** (listings) → **Resume** (tailor and apply). Job listings are the current next step; then resume builder refinements and apply from app.
 
-### Current: Resume builder
+### Current: Data + Jobs + Resume
 
 **Data model (DB first):** One profile per user. Single-word categories: Contact, Summary, Additional on `profiles`; Experience in `experience` + `bullets`; Education, Achievements, Skills, Languages in their own tables. Order via `sort_order`. Resumes are *views* assembled from this data.
 
@@ -14,9 +14,9 @@
 
 ### Planned
 
-- **Job search** — Stream listings from other platforms into the app; one place to browse without signing up everywhere.
-- **Quick apply** — TBD (e.g. open job + copy tailored materials; platform-specific flows later).
-- **AI coach** — Real-time AI interview (audio) → transcript → feed into resume, job/role search, cover letter, interview prep.
+- **Job listings** — In progress: add jobs (manual or paste + AI extract), filter, curate. Next: more sources (aggregators), LLM match/relevance.
+- **Resume builder** — General-purpose resume from profile data; choose sections and templates; LLM suggestions. Then: tailor per job, export.
+- **Apply from app** — Use job + profile to prepare applications (resume slice, cover letter). AI coach for tailoring and next steps.
 
 ### Running the app
 

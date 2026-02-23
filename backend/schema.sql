@@ -384,6 +384,48 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Job listings (saved per user; sourced from manual add, aggregator, etc.)
+CREATE TABLE IF NOT EXISTS job_listings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  external_id TEXT,
+  source TEXT NOT NULL DEFAULT 'manual',
+  title TEXT NOT NULL DEFAULT '',
+  company TEXT NOT NULL DEFAULT '',
+  url TEXT,
+  location TEXT,
+  remote BOOLEAN DEFAULT false,
+  description TEXT,
+  snippet TEXT,
+  posted_at TIMESTAMPTZ,
+  raw JSONB DEFAULT '{}',
+  status TEXT DEFAULT 'saved',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_listings_user_id ON job_listings(user_id);
+CREATE INDEX IF NOT EXISTS idx_job_listings_user_created ON job_listings(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_job_listings_user_status ON job_listings(user_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_job_listings_user_external ON job_listings(user_id, source, external_id) WHERE external_id IS NOT NULL;
+
+ALTER TABLE job_listings ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_listings_select_own' AND tablename = 'job_listings') THEN
+    CREATE POLICY "job_listings_select_own" ON job_listings FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_listings_insert_own' AND tablename = 'job_listings') THEN
+    CREATE POLICY "job_listings_insert_own" ON job_listings FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_listings_update_own' AND tablename = 'job_listings') THEN
+    CREATE POLICY "job_listings_update_own" ON job_listings FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_listings_delete_own' AND tablename = 'job_listings') THEN
+    CREATE POLICY "job_listings_delete_own" ON job_listings FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
 -- Job preferences (one row per user)
 CREATE TABLE IF NOT EXISTS job_preferences (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

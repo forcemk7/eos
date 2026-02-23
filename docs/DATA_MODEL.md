@@ -1,5 +1,7 @@
 # earnOS data model
 
+Product layers (conceptual order): **Data** (base) → **Jobs** (listings, browse, filter) → **Resume** (extract from data, tailor, apply). Next step: Job Listings; then resume builder and apply from app.
+
 Single-word labels only. Categories map 1:1 to schema (tables/columns). Granular: one fact per row. Typed fields (dates, enums) so the LLM parser and ingest can reliably update, ignore, or add.
 
 ---
