@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { ResumeData } from '@/lib/profile'
 import { LANGUAGE_LEVELS } from '@/lib/profile'
+import { MISSING_IDS, fieldIncomplete, type IncompleteContext } from '@/lib/profileCompleteness'
 
 export interface DataTabHandlers {
   updateIdentity: (field: keyof ResumeData['identity'], value: string) => void
@@ -36,23 +37,31 @@ export interface DataTabHandlers {
   updateAdditionalSectionItem: (sectionIndex: number, itemIndex: number, value: string) => void
 }
 
+function empty(s: string | undefined | null): boolean {
+  return s === undefined || s === null || String(s).trim() === ''
+}
+
 export function ContactPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
+  const nameMissing = empty(data.identity.name)
+  const emailMissing = empty(data.identity.email)
+  const phoneMissing = empty(data.identity.phone)
+  const locationMissing = empty(data.identity.location)
   return (
     <div className="data-chunk-group" role="tabpanel">
       <div className="data-chunk-card data-chunk-contact">
-        <div className="data-chunk-field">
+        <div className={`data-chunk-field${nameMissing ? ' incomplete' : ''}`} data-incomplete-hint={nameMissing ? 'Add name' : undefined}>
           <label>Name</label>
           <input type="text" value={data.identity.name} onChange={(e) => h.updateIdentity('name', e.target.value)} placeholder="Full name" />
         </div>
-        <div className="data-chunk-field">
+        <div className={`data-chunk-field${emailMissing ? ' incomplete' : ''}`} data-incomplete-hint={emailMissing ? 'Add email' : undefined}>
           <label>Email</label>
           <input type="text" value={data.identity.email} onChange={(e) => h.updateIdentity('email', e.target.value)} placeholder="email@example.com" />
         </div>
-        <div className="data-chunk-field">
+        <div className={`data-chunk-field${phoneMissing ? ' incomplete' : ''}`} data-incomplete-hint={phoneMissing ? 'Add phone' : undefined}>
           <label>Phone</label>
           <input type="text" value={data.identity.phone} onChange={(e) => h.updateIdentity('phone', e.target.value)} placeholder="+1 234 567 8900" />
         </div>
-        <div className="data-chunk-field">
+        <div className={`data-chunk-field${locationMissing ? ' incomplete' : ''}`} data-incomplete-hint={locationMissing ? 'Add location' : undefined}>
           <label>Location</label>
           <input type="text" value={data.identity.location} onChange={(e) => h.updateIdentity('location', e.target.value)} placeholder="City, State / Country" />
         </div>
@@ -64,13 +73,14 @@ export function ContactPanel({ data, h }: { data: ResumeData; h: DataTabHandlers
 export function LinksPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
   const [newUrl, setNewUrl] = useState('')
   const links = data.links ?? []
+  const linksMissing = links.length === 0
   const handleAdd = () => {
     const u = newUrl.trim()
     if (u) h.addLink(u)
     setNewUrl('')
   }
   return (
-    <div className="data-chunk-group links-panel" role="tabpanel">
+    <div className={`data-chunk-group links-panel${linksMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="links-panel-header">
         <h3 className="links-panel-title">URLs</h3>
         <p className="links-panel-desc">LinkedIn, portfolio, GitHub—any relevant links in one place.</p>
@@ -89,7 +99,7 @@ export function LinksPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }
         </button>
       </div>
       {links.length === 0 ? (
-        <p className="links-empty">No links yet. Add your LinkedIn, portfolio, or other URLs above.</p>
+        <p className="links-empty">{linksMissing ? 'Add links (e.g. LinkedIn, portfolio, GitHub).' : 'No links yet. Add your LinkedIn, portfolio, or other URLs above.'}</p>
       ) : (
         <ul className="links-list">
           {links.map((link, i) => (
@@ -114,21 +124,28 @@ export function LinksPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }
 }
 
 export function SummaryPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
+  const summaryMissing = empty(data.summary)
   return (
-    <div className="data-chunk-group" role="tabpanel">
+    <div className={`data-chunk-group${summaryMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-card">
-        <textarea className="data-chunk-summary" value={data.summary} onChange={(e) => h.updateSummary(e.target.value)} placeholder="2–4 sentences: role level, key strengths, what you're targeting." rows={4} />
+        <textarea className={`data-chunk-summary${summaryMissing ? ' incomplete' : ''}`} value={data.summary} onChange={(e) => h.updateSummary(e.target.value)} placeholder="2–4 sentences: role level, key strengths, what you're targeting." rows={4} aria-invalid={summaryMissing} />
+        {summaryMissing && <span className="incomplete-badge">Add summary</span>}
       </div>
     </div>
   )
 }
 
-export function ExperiencePanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
+export function ExperiencePanel({ data, h, incomplete }: { data: ResumeData; h: DataTabHandlers; incomplete?: IncompleteContext }) {
+  const experienceMissing = fieldIncomplete(incomplete?.missingSet, MISSING_IDS.experience)
   return (
-    <div className="data-chunk-group" role="tabpanel">
+    <div className={`data-chunk-group${experienceMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
         <button type="button" className="secondary-button small" onClick={h.addExperience}>+ Add position</button>
+        {experienceMissing && <span className="incomplete-badge">Add experience</span>}
       </div>
+      {data.experience.length === 0 && experienceMissing ? (
+        <p className="data-empty-hint" style={{ marginTop: 8 }}>Add at least one position.</p>
+      ) : null}
       {data.experience.map((exp, i) => (
         <div key={exp.id} className="data-chunk-card data-chunk-experience">
           <div className="data-chunk-exp-header">
@@ -155,11 +172,16 @@ export function ExperiencePanel({ data, h }: { data: ResumeData; h: DataTabHandl
 
 export function EducationPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
   const list = data.education ?? []
+  const educationMissing = list.length === 0
   return (
-    <div className="data-chunk-group" role="tabpanel">
+    <div className={`data-chunk-group${educationMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
         <button type="button" className="secondary-button small" onClick={h.addEducation}>+ Add education</button>
+        {educationMissing && <span className="incomplete-badge">Add education</span>}
       </div>
+      {list.length === 0 && educationMissing ? (
+        <p className="data-empty-hint" style={{ marginTop: 8 }}>Add at least one degree or credential.</p>
+      ) : null}
       {list.map((edu, i) => (
         <div key={edu.id} className="data-chunk-card data-chunk-education">
           <div className="data-chunk-edu-row">
@@ -177,10 +199,12 @@ export function EducationPanel({ data, h }: { data: ResumeData; h: DataTabHandle
 
 export function AchievementsPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
   const list = data.achievements ?? []
+  const achievementsMissing = list.length === 0
   return (
-    <div className="data-chunk-group" role="tabpanel">
+    <div className={`data-chunk-group${achievementsMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
         <button type="button" className="secondary-button small" onClick={h.addAchievement}>+ Add achievement</button>
+        {achievementsMissing && <span className="incomplete-badge">Add achievements</span>}
       </div>
       {list.map((a, i) => (
         <div key={a.id} className="data-chunk-card data-chunk-achievement">
@@ -197,8 +221,14 @@ export function AchievementsPanel({ data, h }: { data: ResumeData; h: DataTabHan
 }
 
 export function SkillsPanel({ data, h, newSkillName, setNewSkillName }: { data: ResumeData; h: DataTabHandlers; newSkillName: string; setNewSkillName: (v: string) => void }) {
+  const skillsMissing = data.skills.length === 0
   return (
-    <div className="data-chunk-group" role="tabpanel">
+    <div className={`data-chunk-group${skillsMissing ? ' incomplete' : ''}`} role="tabpanel">
+      {skillsMissing && (
+        <div className="data-chunk-group-head" style={{ marginBottom: 8 }}>
+          <span className="incomplete-badge">Add skills</span>
+        </div>
+      )}
       <div className="data-chunk-skills">
         {data.skills.map((s, i) => (
           <div key={s.id} className="data-chunk-skill-chip">
@@ -217,10 +247,12 @@ export function SkillsPanel({ data, h, newSkillName, setNewSkillName }: { data: 
 
 export function LanguagesPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
   const list = data.languages ?? []
+  const languagesMissing = list.length === 0
   return (
-    <div className="data-chunk-group" role="tabpanel">
+    <div className={`data-chunk-group${languagesMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
         <button type="button" className="secondary-button small" onClick={h.addLanguage}>+ Add language</button>
+        {languagesMissing && <span className="incomplete-badge">Add languages</span>}
       </div>
       {list.map((lang, i) => (
         <div key={lang.id} className="data-chunk-card data-chunk-language">
@@ -246,10 +278,12 @@ export function LanguagesPanel({ data, h }: { data: ResumeData; h: DataTabHandle
 
 export function AdditionalPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
   const list = data.additional ?? []
+  const additionalMissing = list.length === 0
   return (
-    <div className="data-chunk-group" role="tabpanel">
+    <div className={`data-chunk-group${additionalMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
         <button type="button" className="secondary-button small" onClick={h.addAdditionalSection}>+ Add a section</button>
+        {additionalMissing && <span className="incomplete-badge">Add section</span>}
       </div>
       <p className="data-section-hint data-additional-hint">Each section has a title and a list of items.</p>
       {list.map((sec, si) => (

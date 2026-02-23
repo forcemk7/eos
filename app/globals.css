@@ -107,6 +107,21 @@ html, body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.app-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: rgba(251, 191, 36, 0.9);
+  border-radius: 9px;
+}
+
 .app-tab:disabled {
   opacity: 0.35;
   cursor: not-allowed;
@@ -114,6 +129,39 @@ html, body {
 
 .sign-out {
   margin-left: auto;
+}
+
+/* ── Dashboard incomplete strip ─────────────────────────── */
+.dashboard-incomplete-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px dashed rgba(251, 191, 36, 0.4);
+  border-radius: var(--radius);
+}
+
+.dashboard-incomplete-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.dashboard-incomplete-view {
+  margin-left: auto;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dashboard-incomplete-view:hover {
+  text-decoration: underline;
 }
 
 /* ── Main content ──────────────────────────────────────── */
@@ -385,6 +433,15 @@ textarea::placeholder {
   background: rgba(59, 130, 246, 0.04);
 }
 
+.resume-dropzone.incomplete {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.resume-upload-incomplete-badge {
+  margin: 0 0 12px 0;
+}
+
 .resume-file-input-hidden {
   position: absolute;
   width: 0;
@@ -610,6 +667,252 @@ textarea::placeholder {
   min-height: 120px;
 }
 
+/* ── Jobs tab ───────────────────────────────────────────── */
+
+.jobs-tab {
+  max-width: var(--content-max);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.jobs-filters-panel .jobs-section-title,
+.jobs-add-panel .jobs-add-title,
+.jobs-list-panel .jobs-list-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jobs-section-hint {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.jobs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.jobs-filter-select,
+.jobs-filter-input {
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.jobs-filter-input {
+  min-width: 140px;
+}
+
+.jobs-filter-location {
+  min-width: 120px;
+}
+
+.jobs-filter-remote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.jobs-add-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.jobs-add-tab {
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+
+.jobs-add-tab:hover {
+  color: var(--text-secondary);
+}
+
+.jobs-add-tab.active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jobs-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.jobs-add-input,
+.jobs-add-textarea {
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.jobs-add-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.jobs-add-remote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.jobs-add-paste-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.jobs-add-save {
+  align-self: flex-start;
+}
+
+.jobs-extracted-preview {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.jobs-extracted-preview strong {
+  color: var(--text);
+}
+
+.jobs-snippet {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.jobs-error {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.jobs-loading,
+.jobs-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.jobs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jobs-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.jobs-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.jobs-card-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jobs-card-company {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.jobs-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.jobs-remote-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent);
+  border-radius: 4px;
+}
+
+.jobs-card-snippet {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.jobs-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.jobs-card-actions .secondary-button {
+  text-decoration: none;
+}
+
+.jobs-delete {
+  color: var(--text-muted);
+}
+
+.jobs-delete:hover {
+  color: var(--danger);
+}
+
 .data-chunk-edu-row {
   display: grid;
   grid-template-columns: 1fr 1fr minmax(100px, 0.8fr) 100px auto;
@@ -809,6 +1112,36 @@ textarea::placeholder {
 
 .data-chunk-contact .data-chunk-field:last-of-type {
   grid-column: 1 / -1;
+}
+
+/* Incomplete data indicators: at the data point */
+.data-chunk-field.incomplete input,
+.data-chunk-field.incomplete textarea,
+.data-chunk-group.incomplete .data-chunk-card,
+.links-panel.incomplete .links-empty,
+.data-chunk-summary.incomplete {
+  border-color: rgba(251, 191, 36, 0.5);
+  border-style: dashed;
+  background: rgba(251, 191, 36, 0.04);
+}
+.data-chunk-field.incomplete::after {
+  content: attr(data-incomplete-hint);
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.data-chunk-group.incomplete .data-chunk-group-head::before,
+.data-chunk-group.incomplete .data-chunk-group-head .incomplete-badge {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.incomplete-badge {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: normal;
 }
 
 /* Links panel (dedicated URLs section) */

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import type { ResumeData } from '@/lib/profile'
 import { normalizedResumeData, genId } from '@/lib/profile'
+import { getDataIncompleteCount } from '@/lib/profileCompleteness'
 import {
   ContactPanel,
   LinksPanel,
@@ -20,12 +21,15 @@ interface DataTabProps {
   initialData: ResumeData | null
   onSave: (data: ResumeData) => Promise<void>
   onDataChange: () => void
+  /** Called when data-tab incomplete count changes (for tab badge and dashboard). */
+  onCompletenessChange?: (dataIncompleteCount: number) => void
 }
 
 export default function DataTab({
   initialData,
   onSave,
   onDataChange,
+  onCompletenessChange,
 }: DataTabProps) {
   const [data, setData] = useState<ResumeData>(() => normalizedResumeData(initialData ?? undefined))
   const [saving, setSaving] = useState(false)
@@ -374,6 +378,25 @@ export default function DataTab({
     if (file) ingestFile(file)
   }
 
+  const dataCount = useMemo(() => getDataIncompleteCount(data), [
+    data.identity.name,
+    data.identity.email,
+    data.identity.phone,
+    data.identity.location,
+    (data.links ?? []).length,
+    !!(data.summary?.trim()),
+    data.experience.length,
+    (data.education ?? []).length,
+    data.skills.length,
+    (data.achievements ?? []).length,
+    (data.languages ?? []).length,
+    (data.additional ?? []).length,
+  ])
+
+  useEffect(() => {
+    onCompletenessChange?.(dataCount)
+  }, [dataCount, onCompletenessChange])
+
   const hasData =
     data.identity.name ||
     data.identity.email ||
@@ -527,20 +550,7 @@ export default function DataTab({
             <div className="data-tab-panels">
               {activeTab === 'contact' && <ContactPanel data={data} h={handlers} />}
               {activeTab === 'links' && <LinksPanel data={data} h={handlers} />}
-              {activeTab === 'summary' && (
-                <div className="data-chunk-group" role="tabpanel">
-                  <div className="data-chunk-card">
-                    <textarea
-                      className="data-chunk-summary"
-                      value={data.summary}
-                      onChange={(e) => updateSummary(e.target.value)}
-                      placeholder="2–4 sentences: role level, key strengths, what you’re targeting."
-                      rows={4}
-                    />
-                  </div>
-                </div>
-              )}
-
+              {activeTab === 'summary' && <SummaryPanel data={data} h={handlers} />}
               {activeTab === 'experience' && <ExperiencePanel data={data} h={handlers} />}
               {activeTab === 'education' && <EducationPanel data={data} h={handlers} />}
               {activeTab === 'achievements' && <AchievementsPanel data={data} h={handlers} />}

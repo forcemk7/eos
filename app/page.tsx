@@ -7,8 +7,9 @@ import AuthForm from './components/AuthForm'
 import ResumeUpload from './components/ResumeUpload'
 import ResumeEditor, { ResumeData } from './components/ResumeEditor'
 import DataTab from './components/DataTab'
+import JobsTab from './components/JobsTab'
 
-type Tab = 'data' | 'resume'
+type Tab = 'data' | 'jobs' | 'resume'
 
 interface ResumeVersion {
   id: string
@@ -24,7 +25,10 @@ export default function Home() {
   const [versions, setVersions] = useState<ResumeVersion[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('data')
+  const [dataIncompleteCount, setDataIncompleteCount] = useState(0)
   const userIdRef = useRef<string | null>(null)
+
+  const totalIncomplete = dataIncompleteCount
 
   useEffect(() => {
     let mounted = true
@@ -155,6 +159,18 @@ export default function Home() {
             onClick={() => setTab('data')}
           >
             Data
+            {dataIncompleteCount > 0 && (
+              <span className="app-tab-badge" aria-label={`${dataIncompleteCount} incomplete`}>
+                {dataIncompleteCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            className={`app-tab${tab === 'jobs' ? ' active' : ''}`}
+            onClick={() => setTab('jobs')}
+          >
+            Jobs
           </button>
           <button
             type="button"
@@ -162,6 +178,11 @@ export default function Home() {
             onClick={() => setTab('resume')}
           >
             Resume
+            {resumeIncompleteCount > 0 && (
+              <span className="app-tab-badge" aria-label="1 incomplete">
+                {resumeIncompleteCount}
+              </span>
+            )}
           </button>
         </nav>
         <button type="button" className="secondary-button sign-out" onClick={handleSignOut}>
@@ -169,6 +190,20 @@ export default function Home() {
         </button>
       </header>
       <main className="app-content">
+        {totalIncomplete > 0 && (
+          <div className="dashboard-incomplete-strip" role="status">
+            <span className="dashboard-incomplete-text">
+              {totalIncomplete} item{totalIncomplete !== 1 ? 's' : ''} to complete
+            </span>
+            <button
+              type="button"
+              className="dashboard-incomplete-view"
+              onClick={() => setTab('data')}
+            >
+              View
+            </button>
+          </div>
+        )}
         {loading ? (
           <p className="loading-message">Loading…</p>
         ) : tab === 'data' ? (
@@ -176,7 +211,10 @@ export default function Home() {
             initialData={current?.parsed_data ?? null}
             onSave={(data) => handleSave(data)}
             onDataChange={loadResume}
+            onCompletenessChange={setDataIncompleteCount}
           />
+        ) : tab === 'jobs' ? (
+          <JobsTab />
         ) : tab === 'resume' ? (
           !current ? (
             <ResumeUpload onSuccess={loadResume} />
