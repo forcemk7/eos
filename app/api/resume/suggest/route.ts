@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { resumeData, jobDescription } = body as { resumeData: any; jobDescription?: string }
+    const { resumeData, jobDescription } = body as { resumeData: unknown; jobDescription?: string }
 
     if (!resumeData) {
       return NextResponse.json(
@@ -116,10 +116,10 @@ Output a single JSON object with key "suggestions" (array of the objects above).
     // Model may return { "suggestions": [...] } or direct array
     let suggestions = parseSuggestionsFromResponse(content)
     return NextResponse.json({ success: true, suggestions })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Resume suggest error:', err)
     return NextResponse.json(
-      { success: false, error: err?.message || 'Failed to get suggestions' },
+      { success: false, error: err instanceof Error ? err.message : 'Failed to get suggestions' },
       { status: 500 }
     )
   }

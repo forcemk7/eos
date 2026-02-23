@@ -5,53 +5,64 @@ import { assembleProfile, syncProfile } from '@/lib/profileDb'
 import type { AssembledProfilePayload } from '@/lib/profile'
 import { legacyToAssembled, legacyToPayload } from '@/lib/profile'
 
+type ParsedInput = Record<string, unknown> & {
+  identity?: Record<string, unknown>
+  summary?: unknown
+  experience?: Array<Record<string, unknown>>
+  education?: Array<Record<string, unknown>>
+  achievements?: Array<Record<string, unknown>>
+  skills?: unknown[]
+  languages?: Array<Record<string, unknown>>
+  additional?: Array<Record<string, unknown>>
+}
+
 /** Normalize incoming body to AssembledProfilePayload (handle legacy bullets: string[] and skills: string[]). */
-function normalizePayload(body: any): AssembledProfilePayload | null {
-  const parsed = body.parsed ?? body
-  if (!parsed || !parsed.identity) return null
-  const identity = parsed.identity
+function normalizePayload(body: { parsed?: unknown } | ParsedInput): AssembledProfilePayload | null {
+  const parsed = (body as { parsed?: ParsedInput }).parsed ?? (body as ParsedInput)
+  if (!parsed || !parsed.identity || typeof parsed.identity !== 'object') return null
+  const identity = parsed.identity as Record<string, unknown>
   const summary = typeof parsed.summary === 'string' ? parsed.summary : ''
-  const experience = (parsed.experience ?? []).map((exp: any, i: number) => ({
-    id: exp.id,
-    title: exp.title ?? '',
-    company: exp.company ?? '',
-    dates: exp.dates ?? '',
+  const experience = ((parsed.experience ?? []) as Array<Record<string, unknown>>).map((exp, i) => ({
+    id: exp.id as string | undefined,
+    title: (exp.title as string) ?? '',
+    company: (exp.company as string) ?? '',
+    dates: (exp.dates as string) ?? '',
     sort_order: i,
-    bullets: (exp.bullets ?? []).map((b: any, j: number) =>
-      typeof b === 'string' ? { text: b, sort_order: j } : { id: b.id, text: b.text ?? '', sort_order: j }
+    bullets: ((exp.bullets as unknown[]) ?? []).map((b, j) =>
+      typeof b === 'string' ? { text: b, sort_order: j } : { id: (b as Record<string, unknown>).id as string | undefined, text: ((b as Record<string, unknown>).text as string) ?? '', sort_order: j }
     ),
   }))
-  const education = (parsed.education ?? []).map((e: any, i: number) => ({
-    id: e.id,
-    institution: e.institution ?? '',
-    degree: e.degree ?? '',
-    field_of_study: e.field_of_study ?? '',
-    dates: e.dates ?? '',
+  const education = ((parsed.education ?? []) as Array<Record<string, unknown>>).map((e, i) => ({
+    id: e.id as string | undefined,
+    institution: (e.institution as string) ?? '',
+    degree: (e.degree as string) ?? '',
+    field_of_study: (e.field_of_study as string) ?? '',
+    dates: (e.dates as string) ?? '',
     sort_order: i,
   }))
-  const achievements = (parsed.achievements ?? []).map((a: any, i: number) => ({
-    id: a.id,
-    title: a.title ?? '',
-    issuer: a.issuer ?? '',
-    date: a.date ?? '',
+  const achievements = ((parsed.achievements ?? []) as Array<Record<string, unknown>>).map((a, i) => ({
+    id: a.id as string | undefined,
+    title: (a.title as string) ?? '',
+    issuer: (a.issuer as string) ?? '',
+    date: (a.date as string) ?? '',
     sort_order: i,
   }))
-  const skills = (parsed.skills ?? []).map((s: any, i: number) =>
-    typeof s === 'string' ? { name: s, sort_order: i } : { id: s.id, name: s.name ?? '', sort_order: i }
+  const skills = ((parsed.skills ?? []) as unknown[]).map((s, i) =>
+    typeof s === 'string' ? { name: s, sort_order: i } : { id: (s as Record<string, unknown>).id as string | undefined, name: ((s as Record<string, unknown>).name as string) ?? '', sort_order: i }
   )
-  const languages = (parsed.languages ?? []).map((l: any, i: number) => ({
-    id: l.id,
-    language: l.language ?? '',
-    level: l.level ?? '',
+  const languages = ((parsed.languages ?? []) as Array<Record<string, unknown>>).map((l, i) => ({
+    id: l.id as string | undefined,
+    language: (l.language as string) ?? '',
+    level: (l.level as string) ?? '',
     sort_order: i,
   }))
-  const additional = (parsed.additional ?? []).map((s: any) => ({
-    id: s.id,
-    title: s.title ?? '',
-    content: Array.isArray(s.content) ? s.content : [],
+  const additional = ((parsed.additional ?? []) as Array<Record<string, unknown>>).map((s) => ({
+    id: s.id as string | undefined,
+    title: (s.title as string) ?? '',
+    content: Array.isArray(s.content) ? (s.content as string[]) : [],
   }))
-  const identityWithPhone = { ...identity, phone: identity.phone ?? '' }
-  return { identity: identityWithPhone, summary, experience, education, achievements, skills, languages, additional }
+  const identityWithPhone = { ...identity, phone: (identity.phone as string) ?? '' }
+  return { identity: identityWithPhone as AssembledProfilePayload['identity'], summary, experience, education, achievements, skills, languages, additional }
 }
 
 export async function GET(req: NextRequest) {
@@ -80,7 +91,7 @@ export async function GET(req: NextRequest) {
       file_name: v.file_name,
     }))
 
-    let current: { id: string; created_at: string; file_name?: string; parsed_data: any } | null = null
+    let current: { id: string; created_at: string; file_name?: string; parsed_data: unknown } | null = null
 
     if (assembled) {
       current = {
@@ -102,9 +113,9 @@ export async function GET(req: NextRequest) {
     }
 
     return jsonWithCookies({ success: true, current, versions }, response)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error loading resume:', err)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Server error' }, { status: 500 })
   }
 }
 
@@ -152,8 +163,8 @@ export async function POST(req: NextRequest) {
       },
       response
     )
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error saving resume:', err)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Server error' }, { status: 500 })
   }
 }

@@ -22,14 +22,15 @@ interface MasterResume {
 
 const STORAGE_KEY_MASTER = 'eOS_masterResume'
 
-function parsedToMaster(parsed: any): MasterResume {
+function parsedToMaster(parsed: { identity?: Record<string, unknown>; summary?: string; experience?: unknown[]; skills?: unknown[] }): MasterResume {
+  const identity = (parsed?.identity ?? {}) as Record<string, unknown>
   return {
     identity: {
-      name: parsed?.identity?.name || '',
-      email: parsed?.identity?.email || '',
-      location: parsed?.identity?.location || '',
+      name: (identity.name as string) || '',
+      email: (identity.email as string) || '',
+      location: (identity.location as string) || '',
       links: (() => {
-        const raw = parsed?.identity?.links
+        const raw = identity.links
         if (!Array.isArray(raw)) return []
         return raw.map((item: unknown) => {
           if (item && typeof item === 'object' && item !== null && 'url' in item) {
@@ -40,9 +41,9 @@ function parsedToMaster(parsed: any): MasterResume {
         })
       })(),
     },
-    summary: parsed?.summary || '',
-    experience: Array.isArray(parsed?.experience) ? parsed.experience : [],
-    skills: Array.isArray(parsed?.skills) ? parsed.skills : [],
+    summary: (parsed?.summary as string) || '',
+    experience: Array.isArray(parsed?.experience) ? (parsed.experience as MasterResume['experience']) : [],
+    skills: Array.isArray(parsed?.skills) ? (parsed.skills as string[]) : [],
   }
 }
 
@@ -136,9 +137,9 @@ export default function ResumeTab() {
       setMasterResume(resume)
       saveMasterResume(resume)
       setUploadStatus('Parsed successfully. This is now your master resume.')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Upload/parse error', err)
-      setUploadStatus(err.message || 'Failed to parse resume.')
+      setUploadStatus(err instanceof Error ? err.message : 'Failed to parse resume.')
       setUploadError(true)
     }
   }

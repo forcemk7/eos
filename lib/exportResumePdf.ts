@@ -111,7 +111,7 @@ function exportClassicPdf(data: ResumeData, filename: string) {
     })
     y += 4
   }
-  const languages = (data as any).languages as Array<{ language: string; level: string }> | undefined
+  const languages = (data as { languages?: Array<{ language: string; level: string }> }).languages
   if (languages?.length) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
@@ -127,7 +127,7 @@ function exportClassicPdf(data: ResumeData, filename: string) {
     })
     y += 4
   }
-  const additional = (data as any).additional as Array<{ title: string; content: string[] }> | undefined
+  const additional = (data as { additional?: Array<{ title: string; content: string[] }> }).additional
   if (additional?.length) {
     for (const sec of additional) {
       if (!sec.title && !sec.content?.length) continue
@@ -251,7 +251,7 @@ function exportCompactPdf(data: ResumeData, filename: string) {
       yMain += 3
     }
   }
-  const languages = (data as any).languages as Array<{ language: string; level: string }> | undefined
+  const languages = (data as { languages?: Array<{ language: string; level: string }> }).languages
   if (languages?.length) {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
@@ -267,7 +267,7 @@ function exportCompactPdf(data: ResumeData, filename: string) {
     })
     yMain += 4
   }
-  const additional = (data as any).additional as Array<{ title: string; content: string[] }> | undefined
+  const additional = (data as { additional?: Array<{ title: string; content: string[] }> }).additional
   if (additional?.length) {
     for (const sec of additional) {
       if (!sec.title && !sec.content?.length) continue

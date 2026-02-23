@@ -190,8 +190,8 @@ export function legacyToAssembled(legacy: LegacyParsedData | null): AssembledPro
   const identity = {
     ...DEFAULT_IDENTITY,
     ...rawIdentity,
-    phone: (rawIdentity as any).phone ?? '',
-    links: normalizeLinks((rawIdentity as any).links ?? []),
+    phone: rawIdentity.phone ?? '',
+    links: normalizeLinks(rawIdentity.links ?? []),
   }
   const experience = (legacy.experience ?? []).map((exp, i) => ({
     id: genId(),
@@ -227,20 +227,23 @@ export function legacyToAssembled(legacy: LegacyParsedData | null): AssembledPro
   }))
   const languages = (legacy.languages ?? []).map((l, i) => ({
     id: genId(),
-    language: (l as any).language ?? '',
-    level: (l as any).level ?? '',
+    language: (l as { language?: string; level?: string }).language ?? '',
+    level: (l as { language?: string; level?: string }).level ?? '',
     sort_order: i,
   }))
-  const additional = (legacy.additional ?? []).map((s, i) => ({
-    id: genId(),
-    title: (s as any).title ?? '',
-    content: Array.isArray((s as any).content) ? (s as any).content : [],
-  }))
+  const additional = (legacy.additional ?? []).map((s) => {
+    const t = s as { title?: string; content?: string[] }
+    return {
+      id: genId(),
+      title: t.title ?? '',
+      content: Array.isArray(t.content) ? t.content : ([] as string[]),
+    }
+  })
   return { identity, summary: legacy.summary ?? '', experience, education, achievements, skills, languages, additional }
 }
 
 /** Normalize any parsed payload (legacy or assembled) to AssembledProfile. For UI. */
-export function normalizedResumeData(parsed: any): ResumeData {
+export function normalizedResumeData(parsed: AssembledProfile | LegacyParsedData | null | undefined): ResumeData {
   if (!parsed) {
     return {
       identity: DEFAULT_IDENTITY,
@@ -255,18 +258,23 @@ export function normalizedResumeData(parsed: any): ResumeData {
   }
   if (parsed.experience?.length && typeof parsed.experience[0].bullets?.[0] === 'object' && parsed.experience[0].bullets[0].text !== undefined) {
     const p = parsed as AssembledProfile
+    const additional: Array<{ id: string; title: string; content: string[] }> = (p.additional ?? []).map((s) => ({
+      id: s.id,
+      title: s.title,
+      content: Array.isArray(s.content) ? s.content : [],
+    }))
     return {
       ...p,
       identity: {
         ...DEFAULT_IDENTITY,
         ...p.identity,
-        phone: (p.identity as any)?.phone ?? '',
+        phone: p.identity?.phone ?? '',
         links: normalizeLinks(p.identity?.links ?? []),
       },
       education: p.education ?? [],
       achievements: p.achievements ?? [],
       languages: p.languages ?? [],
-      additional: p.additional ?? [],
+      additional,
     }
   }
   const fromLegacy = legacyToAssembled(parsed as LegacyParsedData)
@@ -289,8 +297,8 @@ export function legacyToPayload(legacy: LegacyParsedData | null): AssembledProfi
   const identity = {
     ...DEFAULT_IDENTITY,
     ...rawIdentity,
-    phone: (rawIdentity as any).phone ?? '',
-    links: normalizeLinks((rawIdentity as any).links ?? []),
+    phone: rawIdentity.phone ?? '',
+    links: normalizeLinks(rawIdentity.links ?? []),
   }
   const experience = (legacy.experience ?? []).map((exp, i) => ({
     title: exp.title ?? '',
@@ -314,13 +322,13 @@ export function legacyToPayload(legacy: LegacyParsedData | null): AssembledProfi
   }))
   const skills = (legacy.skills ?? []).map((name, i) => ({ name, sort_order: i }))
   const languages = (legacy.languages ?? []).map((l, i) => ({
-    language: (l as any).language ?? '',
-    level: (l as any).level ?? '',
+    language: (l as { language?: string; level?: string }).language ?? '',
+    level: (l as { language?: string; level?: string }).level ?? '',
     sort_order: i,
   }))
-  const additional = (legacy.additional ?? []).map((s) => ({
-    title: (s as any).title ?? '',
-    content: Array.isArray((s as any).content) ? (s as any).content : [],
-  }))
+  const additional = (legacy.additional ?? []).map((s) => {
+    const t = s as { title?: string; content?: string[] }
+    return { title: t.title ?? '', content: Array.isArray(t.content) ? t.content : ([] as string[]) }
+  })
   return { identity, summary: legacy.summary ?? '', experience, education, achievements, skills, languages, additional }
 }

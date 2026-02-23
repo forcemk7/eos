@@ -111,7 +111,7 @@ export default function ResumeEditor({
           })),
         }
       } else {
-        ;(next[index] as any)[field] = value
+        ;(next[index] as Record<string, unknown>)[field] = value
       }
       return { ...d, experience: next }
     })

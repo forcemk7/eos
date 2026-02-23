@@ -28,8 +28,8 @@ export default function AuthForm() {
         setMessage('Signed in.')
         window.location.reload()
       }
-    } catch (err: any) {
-      setMessage(err.message || 'Something went wrong')
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }

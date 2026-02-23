@@ -95,12 +95,12 @@ export async function POST(req: NextRequest) {
       fileName: file.name,
       storagePath,
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error parsing resume:', err)
     return NextResponse.json(
       {
         success: false,
-        error: err.message || 'Failed to parse resume.',
+        error: err instanceof Error ? err.message : 'Failed to parse resume.',
       },
       { status: 500 }
     )

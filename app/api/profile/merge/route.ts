@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, jsonWithCookies } from '@/lib/supabase/server'
 import { assembleProfile, mergeIntoProfile } from '@/lib/profileDb'
 import type { AssembledProfilePayload } from '@/lib/profile'
-import { legacyToAssembled } from '@/lib/profile'
+import { legacyToAssembled, type LegacyParsedData } from '@/lib/profile'
 
-function toPayload(parsed: any): AssembledProfilePayload | null {
-  if (!parsed?.identity) return null
-  const assembled = legacyToAssembled(parsed)
+function toPayload(parsed: unknown): AssembledProfilePayload | null {
+  if (!parsed || typeof parsed !== 'object' || !(parsed as Record<string, unknown>).identity) return null
+  const assembled = legacyToAssembled(parsed as LegacyParsedData)
   if (!assembled) return null
   return {
     identity: assembled.identity,
@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
     }
 
     return jsonWithCookies({ success: true, profile: assembled }, response)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Profile merge error:', err)
-    return NextResponse.json({ success: false, error: err?.message ?? 'Merge failed' }, { status: 500 })
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Merge failed' }, { status: 500 })
   }
 }

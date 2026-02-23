@@ -178,10 +178,10 @@ export async function POST(req: NextRequest) {
       parsed,
       source,
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Ingest error:', err)
     return NextResponse.json(
-      { success: false, error: err?.message || 'Ingest failed.' },
+      { success: false, error: err instanceof Error ? err.message : 'Ingest failed.' },
       { status: 500 }
     )
   }

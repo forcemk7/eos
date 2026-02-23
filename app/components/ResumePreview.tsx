@@ -62,17 +62,17 @@ function ClassicLayout({ data, className }: { data: ResumeData; className: strin
           </p>
         </section>
       )}
-      {(data as any).languages?.length > 0 && (
+      {data.languages?.length > 0 && (
         <section className="resume-preview-section">
           <h2 className="resume-preview-heading">Languages</h2>
           <p className="resume-preview-languages">
-            {(data as any).languages.map((l: { language: string; level: string }) => `${l.language}${l.level ? ` (${l.level})` : ''}`).join(', ')}
+            {data.languages.map((l) => `${l.language}${l.level ? ` (${l.level})` : ''}`).join(', ')}
           </p>
         </section>
       )}
-      {(data as any).additional?.length > 0 && (
+      {data.additional?.length > 0 && (
         <>
-          {(data as any).additional.map((sec: { title: string; content: string[] }, i: number) => (
+          {data.additional.map((sec, i) => (
             sec.title || sec.content?.length ? (
               <section key={i} className="resume-preview-section">
                 {sec.title && <h2 className="resume-preview-heading">{sec.title}</h2>}
@@ -137,17 +137,17 @@ function CompactLayout({ data, className }: { data: ResumeData; className: strin
             ))}
           </section>
         )}
-        {(data as any).languages?.length > 0 && (
+        {data.languages?.length > 0 && (
           <section className="resume-preview-section">
             <h2 className="resume-preview-heading">Languages</h2>
             <p className="resume-preview-languages">
-              {(data as any).languages.map((l: { language: string; level: string }) => `${l.language}${l.level ? ` (${l.level})` : ''}`).join(', ')}
+              {data.languages.map((l) => `${l.language}${l.level ? ` (${l.level})` : ''}`).join(', ')}
             </p>
           </section>
         )}
-        {(data as any).additional?.length > 0 && (
+        {data.additional?.length > 0 && (
           <>
-            {(data as any).additional.map((sec: { title: string; content: string[] }, i: number) => (
+            {data.additional.map((sec, i) => (
               sec.title || sec.content?.length ? (
                 <section key={i} className="resume-preview-section">
                   {sec.title && <h2 className="resume-preview-heading">{sec.title}</h2>}

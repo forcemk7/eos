@@ -9,6 +9,7 @@ import type {
   Identity,
 } from './profile'
 import { DEFAULT_IDENTITY, normalizeLinks } from './profile'
+import { runSyncProfile } from './profileDbSync'
 
 export async function assembleProfile(
   supabase: SupabaseClient,
@@ -26,8 +27,8 @@ export async function assembleProfile(
   const identity = {
     ...DEFAULT_IDENTITY,
     ...rawIdentity,
-    phone: (rawIdentity as any).phone ?? '',
-    links: normalizeLinks((rawIdentity as any).links ?? []),
+    phone: rawIdentity.phone ?? '',
+    links: normalizeLinks(rawIdentity.links ?? []),
   }
 
   const { data: workRows, error: workError } = await supabase
@@ -119,9 +120,10 @@ export async function assembleProfile(
     sort_order: l.sort_order,
   }))
 
-  const rawAdditional = (profileRow as any).additional
+  type RawSection = { id?: string; title?: string; content?: unknown }
+  const rawAdditional = (profileRow as { additional?: RawSection[] }).additional
   const additional = Array.isArray(rawAdditional)
-    ? rawAdditional.map((s: any, i: number) => ({
+    ? rawAdditional.map((s: RawSection, i: number) => ({
         id: s.id ?? `section-${i}`,
         title: typeof s.title === 'string' ? s.title : '',
         content: Array.isArray(s.content) ? s.content : [],
@@ -146,253 +148,12 @@ export async function syncProfile(
   userId: string,
   payload: AssembledProfilePayload
 ): Promise<AssembledProfile | null> {
-  const { identity, summary, experience, skills, education = [], achievements = [], languages = [], additional = [] } = payload
-
-  const { error: profileError } = await supabase.from('profiles').upsert(
-    {
-      user_id: userId,
-      identity,
-      summary: summary ?? '',
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id' }
-  )
-  if (profileError) {
-    console.error('profile sync error:', profileError)
+  try {
+    await runSyncProfile(supabase, userId, payload)
+    return assembleProfile(supabase, userId)
+  } catch {
     return null
   }
-
-  const { data: existingWorkRows } = await supabase
-    .from('experience')
-    .select('id')
-    .eq('user_id', userId)
-  const existingWorkIds = new Set((existingWorkRows ?? []).map((r) => r.id))
-
-  const payloadWorkIds: string[] = []
-  for (let i = 0; i < experience.length; i++) {
-    const exp = experience[i]
-    const workId = exp.id && existingWorkIds.has(exp.id) ? exp.id : crypto.randomUUID()
-    payloadWorkIds.push(workId)
-
-    if (existingWorkIds.has(workId)) {
-      await supabase
-        .from('experience')
-        .update({
-          company: exp.company ?? '',
-          title: exp.title ?? '',
-          dates: exp.dates ?? '',
-          sort_order: i,
-        })
-        .eq('id', workId)
-        .eq('user_id', userId)
-    } else {
-      await supabase.from('experience').insert({
-        id: workId,
-        user_id: userId,
-        company: exp.company ?? '',
-        title: exp.title ?? '',
-        dates: exp.dates ?? '',
-        sort_order: i,
-      })
-    }
-
-    const { data: existingBulletRows } = await supabase
-      .from('bullets')
-      .select('id')
-      .eq('experience_id', workId)
-    const existingBulletIds = new Set((existingBulletRows ?? []).map((r) => r.id))
-
-    const bulletPayload = exp.bullets ?? []
-    const bulletIdsToKeep: string[] = []
-    for (let j = 0; j < bulletPayload.length; j++) {
-      const b = bulletPayload[j]
-      const bulletId =
-        b.id && existingBulletIds.has(b.id) ? b.id : crypto.randomUUID()
-      bulletIdsToKeep.push(bulletId)
-
-      if (existingBulletIds.has(bulletId)) {
-        await supabase
-          .from('bullets')
-          .update({ text: b.text ?? '', sort_order: j })
-          .eq('id', bulletId)
-      } else {
-        await supabase.from('bullets').insert({
-          id: bulletId,
-          experience_id: workId,
-          text: b.text ?? '',
-          sort_order: j,
-        })
-      }
-    }
-    const bulletsToDelete = (existingBulletRows ?? [])
-      .map((r) => r.id)
-      .filter((id) => !bulletIdsToKeep.includes(id))
-    for (const bid of bulletsToDelete) {
-      await supabase.from('bullets').delete().eq('id', bid)
-    }
-  }
-
-  const workToDelete = [...existingWorkIds].filter((id) => !payloadWorkIds.includes(id))
-  for (const wid of workToDelete) {
-    await supabase.from('experience').delete().eq('id', wid).eq('user_id', userId)
-  }
-
-  const { data: existingSkillRows } = await supabase
-    .from('skills')
-    .select('id')
-    .eq('user_id', userId)
-  const existingSkillIds = new Set((existingSkillRows ?? []).map((r) => r.id))
-
-  const skillIdsToKeep: string[] = []
-  for (let i = 0; i < skills.length; i++) {
-    const s = skills[i]
-    const skillId = s.id && existingSkillIds.has(s.id) ? s.id : crypto.randomUUID()
-    skillIdsToKeep.push(skillId)
-
-    if (existingSkillIds.has(skillId)) {
-      await supabase
-        .from('skills')
-        .update({ name: s.name ?? '', sort_order: i })
-        .eq('id', skillId)
-        .eq('user_id', userId)
-    } else {
-      await supabase.from('skills').insert({
-        id: skillId,
-        user_id: userId,
-        name: s.name ?? '',
-        sort_order: i,
-      })
-    }
-  }
-  const skillsToDelete = [...existingSkillIds].filter((id) => !skillIdsToKeep.includes(id))
-  for (const sid of skillsToDelete) {
-    await supabase.from('skills').delete().eq('id', sid).eq('user_id', userId)
-  }
-
-  const { data: existingEduRows } = await supabase
-    .from('education')
-    .select('id')
-    .eq('user_id', userId)
-  const existingEduIds = new Set((existingEduRows ?? []).map((r) => r.id))
-  const eduPayload = education
-  const eduIdsToKeep: string[] = []
-  for (let i = 0; i < eduPayload.length; i++) {
-    const e = eduPayload[i]
-    const eid = e.id && existingEduIds.has(e.id) ? e.id : crypto.randomUUID()
-    eduIdsToKeep.push(eid)
-    if (existingEduIds.has(eid)) {
-      await supabase
-        .from('education')
-        .update({
-          institution: e.institution ?? '',
-          degree: e.degree ?? '',
-          field_of_study: e.field_of_study ?? '',
-          dates: e.dates ?? '',
-          sort_order: i,
-        })
-        .eq('id', eid)
-        .eq('user_id', userId)
-    } else {
-      await supabase.from('education').insert({
-        id: eid,
-        user_id: userId,
-        institution: e.institution ?? '',
-        degree: e.degree ?? '',
-        field_of_study: e.field_of_study ?? '',
-        dates: e.dates ?? '',
-        sort_order: i,
-      })
-    }
-  }
-  for (const eid of existingEduIds) {
-    if (!eduIdsToKeep.includes(eid)) {
-      await supabase.from('education').delete().eq('id', eid).eq('user_id', userId)
-    }
-  }
-
-  const { data: existingAchRows } = await supabase
-    .from('achievements')
-    .select('id')
-    .eq('user_id', userId)
-  const existingAchIds = new Set((existingAchRows ?? []).map((r) => r.id))
-  const achPayload = achievements
-  const achIdsToKeep: string[] = []
-  for (let i = 0; i < achPayload.length; i++) {
-    const a = achPayload[i]
-    const aid = a.id && existingAchIds.has(a.id) ? a.id : crypto.randomUUID()
-    achIdsToKeep.push(aid)
-    if (existingAchIds.has(aid)) {
-      await supabase
-        .from('achievements')
-        .update({
-          title: a.title ?? '',
-          issuer: a.issuer ?? '',
-          date: a.date ?? '',
-          sort_order: i,
-        })
-        .eq('id', aid)
-        .eq('user_id', userId)
-    } else {
-      await supabase.from('achievements').insert({
-        id: aid,
-        user_id: userId,
-        title: a.title ?? '',
-        issuer: a.issuer ?? '',
-        date: a.date ?? '',
-        sort_order: i,
-      })
-    }
-  }
-  for (const aid of existingAchIds) {
-    if (!achIdsToKeep.includes(aid)) {
-      await supabase.from('achievements').delete().eq('id', aid).eq('user_id', userId)
-    }
-  }
-
-  const { data: existingLangRows } = await supabase
-    .from('languages')
-    .select('id')
-    .eq('user_id', userId)
-  const existingLangIds = new Set((existingLangRows ?? []).map((r) => r.id))
-  const langPayload = languages
-  const langIdsToKeep: string[] = []
-  for (let i = 0; i < langPayload.length; i++) {
-    const l = langPayload[i]
-    const lid = l.id && existingLangIds.has(l.id) ? l.id : crypto.randomUUID()
-    langIdsToKeep.push(lid)
-    if (existingLangIds.has(lid)) {
-      await supabase
-        .from('languages')
-        .update({ language: l.language ?? '', level: l.level ?? '', sort_order: i })
-        .eq('id', lid)
-        .eq('user_id', userId)
-    } else {
-      await supabase.from('languages').insert({
-        id: lid,
-        user_id: userId,
-        language: l.language ?? '',
-        level: l.level ?? '',
-        sort_order: i,
-      })
-    }
-  }
-  for (const lid of existingLangIds) {
-    if (!langIdsToKeep.includes(lid)) {
-      await supabase.from('languages').delete().eq('id', lid).eq('user_id', userId)
-    }
-  }
-
-  const additionalJson = additional.map((s) => ({
-    id: s.id ?? crypto.randomUUID(),
-    title: s.title ?? '',
-    content: s.content ?? [],
-  }))
-  await supabase
-    .from('profiles')
-    .update({ additional: additionalJson, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
-
-  return assembleProfile(supabase, userId)
 }
 
 /** Merge parsed document into existing profile. Adds new experience/bullets/skills/education/achievements/languages; updates identity/summary/additional. */
@@ -410,10 +171,11 @@ export async function mergeIntoProfile(
     const title = (typeof s === 'object' ? s.title : '').trim()
     if (!title || existingTitles.has(title.toLowerCase())) continue
     existingTitles.add(title.toLowerCase())
+    const sec = s as { id?: string; content?: string[] }
     mergedAdditional.push({
-      id: (s as any).id ?? crypto.randomUUID(),
+      id: sec.id ?? crypto.randomUUID(),
       title,
-      content: Array.isArray((s as any).content) ? (s as any).content : [],
+      content: Array.isArray(sec.content) ? sec.content : [],
     })
   }
 

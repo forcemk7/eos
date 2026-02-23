@@ -27,7 +27,7 @@ const ts = require('typescript');
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
-const SOURCE_DIRS = ['app', 'components', 'lib', 'types'];
+const SOURCE_DIRS = ['app', 'backend', 'components', 'lib', 'types'];
 const SOURCE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs']);
 const EXCLUDE_DIRS = new Set([
   'node_modules', '.next', '.git', 'dist', 'build', '.jscpd-report', 'healthcheck',

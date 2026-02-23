@@ -35,8 +35,8 @@ export async function GET(
       },
       response
     )
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error loading resume version:', err)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Server error' }, { status: 500 })
   }
 }

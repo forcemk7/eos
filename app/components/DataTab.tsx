@@ -3,6 +3,17 @@
 import { useState, useEffect, useRef } from 'react'
 import type { ResumeData } from '@/lib/profile'
 import { normalizedResumeData, genId } from '@/lib/profile'
+import {
+  ContactPanel,
+  SummaryPanel,
+  ExperiencePanel,
+  EducationPanel,
+  AchievementsPanel,
+  SkillsPanel,
+  LanguagesPanel,
+  AdditionalPanel,
+  type DataTabHandlers,
+} from './DataTabPanels'
 
 interface DataTabProps {
   initialData: ResumeData | null
@@ -319,8 +330,8 @@ export default function DataTab({
       setUploadStatus('Done.')
       onDataChange()
       setData(normalizedResumeData(mergeData.profile))
-    } catch (err: any) {
-      setUploadStatus(err.message || 'Something went wrong.')
+    } catch (err: unknown) {
+      setUploadStatus(err instanceof Error ? err.message : 'Something went wrong.')
       setUploadError(true)
     }
   }
@@ -356,8 +367,8 @@ export default function DataTab({
       setPastedText('')
       onDataChange()
       setData(normalizedResumeData(mergeData.profile))
-    } catch (err: any) {
-      setUploadStatus(err.message || 'Something went wrong.')
+    } catch (err: unknown) {
+      setUploadStatus(err instanceof Error ? err.message : 'Something went wrong.')
       setUploadError(true)
     }
   }
@@ -401,8 +412,37 @@ export default function DataTab({
     { id: 'additional', label: 'Additional' },
   ]
 
-  const educationList = data.education ?? []
-  const achievementsList = data.achievements ?? []
+  const handlers: DataTabHandlers = {
+    updateIdentity,
+    updateLink,
+    addLink,
+    removeLink,
+    updateSummary,
+    updateExperience,
+    updateBullet,
+    addBullet,
+    removeBullet,
+    addExperience,
+    removeExperience,
+    addSkill,
+    removeSkill,
+    updateSkill,
+    addEducation,
+    removeEducation,
+    updateEducation,
+    addAchievement,
+    removeAchievement,
+    updateAchievement,
+    addLanguage,
+    removeLanguage,
+    updateLanguage,
+    addAdditionalSection,
+    removeAdditionalSection,
+    updateAdditionalSectionTitle,
+    addAdditionalSectionItem,
+    removeAdditionalSectionItem,
+    updateAdditionalSectionItem,
+  }
 
   return (
     <div className="data-tab">
@@ -486,83 +526,7 @@ export default function DataTab({
               ))}
             </div>
             <div className="data-tab-panels">
-              {activeTab === 'contact' && (
-                <div className="data-chunk-group" role="tabpanel">
-                  <div className="data-chunk-card data-chunk-contact">
-                    <div className="data-chunk-field">
-                      <label>Name</label>
-                      <input
-                        type="text"
-                        value={data.identity.name}
-                        onChange={(e) => updateIdentity('name', e.target.value)}
-                        placeholder="Full name"
-                      />
-                    </div>
-                    <div className="data-chunk-field">
-                      <label>Email</label>
-                      <input
-                        type="text"
-                        value={data.identity.email}
-                        onChange={(e) => updateIdentity('email', e.target.value)}
-                        placeholder="email@example.com"
-                      />
-                    </div>
-                    <div className="data-chunk-field">
-                      <label>Phone</label>
-                      <input
-                        type="text"
-                        value={data.identity.phone}
-                        onChange={(e) => updateIdentity('phone', e.target.value)}
-                        placeholder="+1 234 567 8900"
-                      />
-                    </div>
-                    <div className="data-chunk-field">
-                      <label>Location</label>
-                      <input
-                        type="text"
-                        value={data.identity.location}
-                        onChange={(e) => updateIdentity('location', e.target.value)}
-                        placeholder="City, State / Country"
-                      />
-                    </div>
-                    <div className="data-chunk-field">
-                      <div className="data-chunk-links-head">
-                        <span className="data-chunk-field-label">Links</span>
-                        <button type="button" className="secondary-button small" onClick={addLink}>
-                          + Add link
-                        </button>
-                      </div>
-                      {(data.identity.links ?? []).map((link, i) => (
-                        <div key={i} className="data-chunk-link-row">
-                          <input
-                            type="text"
-                            value={link.label}
-                            onChange={(e) => updateLink(i, 'label', e.target.value)}
-                            placeholder="Label (e.g. LinkedIn)"
-                            className="data-chunk-link-label"
-                          />
-                          <input
-                            type="url"
-                            value={link.url}
-                            onChange={(e) => updateLink(i, 'url', e.target.value)}
-                            placeholder="https://..."
-                            className="data-chunk-link-url"
-                          />
-                          <button
-                            type="button"
-                            className="data-chunk-remove small"
-                            onClick={() => removeLink(i)}
-                            title="Remove link"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
+              {activeTab === 'contact' && <ContactPanel data={data} h={handlers} />}
               {activeTab === 'summary' && (
                 <div className="data-chunk-group" role="tabpanel">
                   <div className="data-chunk-card">
@@ -577,313 +541,12 @@ export default function DataTab({
                 </div>
               )}
 
-              {activeTab === 'experience' && (
-                <div className="data-chunk-group" role="tabpanel">
-                  <div className="data-chunk-group-head">
-                    <button type="button" className="secondary-button small" onClick={addExperience}>
-                      + Add position
-                    </button>
-                  </div>
-                  {data.experience.map((exp, i) => (
-                    <div key={exp.id} className="data-chunk-card data-chunk-experience">
-                      <div className="data-chunk-exp-header">
-                        <input
-                          type="text"
-                          value={exp.title}
-                          onChange={(e) => updateExperience(i, 'title', e.target.value)}
-                          placeholder="Job title"
-                          className="data-chunk-exp-title"
-                        />
-                        <input
-                          type="text"
-                          value={exp.company}
-                          onChange={(e) => updateExperience(i, 'company', e.target.value)}
-                          placeholder="Company"
-                          className="data-chunk-exp-company"
-                        />
-                        <input
-                          type="text"
-                          value={exp.dates}
-                          onChange={(e) => updateExperience(i, 'dates', e.target.value)}
-                          placeholder="Dates"
-                          className="data-chunk-exp-dates"
-                        />
-                        <button
-                          type="button"
-                          className="data-chunk-remove"
-                          onClick={() => removeExperience(i)}
-                          title="Remove position"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <div className="data-chunk-bullets">
-                        <span className="data-chunk-bullets-label">Bullets</span>
-                        {(exp.bullets || []).map((b, j) => (
-                          <div key={b.id} className="data-chunk-bullet-row">
-                            <input
-                              type="text"
-                              value={b.text}
-                              onChange={(e) => updateBullet(i, j, e.target.value)}
-                              placeholder="Quantified achievement or responsibility…"
-                              className="data-chunk-bullet-input"
-                            />
-                            <button
-                              type="button"
-                              className="data-chunk-remove small"
-                              onClick={() => removeBullet(i, j)}
-                              title="Remove"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          className="secondary-button small data-chunk-add-bullet"
-                          onClick={() => addBullet(i)}
-                        >
-                          + Add bullet
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'education' && (
-                <div className="data-chunk-group" role="tabpanel">
-                  <div className="data-chunk-group-head">
-                    <button type="button" className="secondary-button small" onClick={addEducation}>
-                      + Add education
-                    </button>
-                  </div>
-                  {educationList.map((edu, i) => (
-                    <div key={edu.id} className="data-chunk-card data-chunk-education">
-                      <div className="data-chunk-edu-row">
-                        <input
-                          type="text"
-                          value={edu.institution}
-                          onChange={(e) => updateEducation(i, 'institution', e.target.value)}
-                          placeholder="Institution"
-                        />
-                        <input
-                          type="text"
-                          value={edu.degree}
-                          onChange={(e) => updateEducation(i, 'degree', e.target.value)}
-                          placeholder="Degree"
-                        />
-                        <input
-                          type="text"
-                          value={edu.field_of_study}
-                          onChange={(e) => updateEducation(i, 'field_of_study', e.target.value)}
-                          placeholder="Field of study"
-                        />
-                        <input
-                          type="text"
-                          value={edu.dates}
-                          onChange={(e) => updateEducation(i, 'dates', e.target.value)}
-                          placeholder="Dates"
-                          className="data-chunk-dates"
-                        />
-                        <button
-                          type="button"
-                          className="data-chunk-remove"
-                          onClick={() => removeEducation(i)}
-                          title="Remove"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'achievements' && (
-                <div className="data-chunk-group" role="tabpanel">
-                  <div className="data-chunk-group-head">
-                    <button type="button" className="secondary-button small" onClick={addAchievement}>
-                      + Add achievement
-                    </button>
-                  </div>
-                  {achievementsList.map((a, i) => (
-                    <div key={a.id} className="data-chunk-card data-chunk-achievement">
-                      <div className="data-chunk-ach-row">
-                        <input
-                          type="text"
-                          value={a.title}
-                          onChange={(e) => updateAchievement(i, 'title', e.target.value)}
-                          placeholder="Award or certification name"
-                        />
-                        <input
-                          type="text"
-                          value={a.issuer}
-                          onChange={(e) => updateAchievement(i, 'issuer', e.target.value)}
-                          placeholder="Issuer"
-                        />
-                        <input
-                          type="text"
-                          value={a.date}
-                          onChange={(e) => updateAchievement(i, 'date', e.target.value)}
-                          placeholder="Date"
-                          className="data-chunk-dates"
-                        />
-                        <button
-                          type="button"
-                          className="data-chunk-remove"
-                          onClick={() => removeAchievement(i)}
-                          title="Remove"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'skills' && (
-                <div className="data-chunk-group" role="tabpanel">
-                  <div className="data-chunk-skills">
-                    {data.skills.map((s, i) => (
-                      <div key={s.id} className="data-chunk-skill-chip">
-                        <input
-                          type="text"
-                          value={s.name}
-                          onChange={(e) => updateSkill(i, e.target.value)}
-                          className="data-chunk-skill-input"
-                          placeholder="Skill"
-                        />
-                        <button
-                          type="button"
-                          className="data-chunk-remove small"
-                          onClick={() => removeSkill(i)}
-                          title="Remove"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <div className="data-chunk-skill-add">
-                      <input
-                        type="text"
-                        value={newSkillName}
-                        onChange={(e) => setNewSkillName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill(newSkillName))}
-                        placeholder="+ Add skill"
-                        className="data-chunk-skill-add-input"
-                      />
-                      <button
-                        type="button"
-                        className="secondary-button small"
-                        onClick={() => addSkill(newSkillName)}
-                        disabled={!newSkillName.trim()}
-                      >
-                        Add
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'languages' && (
-                <div className="data-chunk-group" role="tabpanel">
-                  <div className="data-chunk-group-head">
-                    <button type="button" className="secondary-button small" onClick={addLanguage}>
-                      + Add language
-                    </button>
-                  </div>
-                  {(data.languages ?? []).map((lang, i) => (
-                    <div key={lang.id} className="data-chunk-card data-chunk-language">
-                      <div className="data-chunk-lang-row">
-                        <input
-                          type="text"
-                          value={lang.language}
-                          onChange={(e) => updateLanguage(i, 'language', e.target.value)}
-                          placeholder="Language"
-                        />
-                        <input
-                          type="text"
-                          value={lang.level}
-                          onChange={(e) => updateLanguage(i, 'level', e.target.value)}
-                          placeholder="Level (e.g. Native, Fluent, Intermediate)"
-                          className="data-chunk-lang-level"
-                        />
-                        <button
-                          type="button"
-                          className="data-chunk-remove"
-                          onClick={() => removeLanguage(i)}
-                          title="Remove"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'additional' && (
-                <div className="data-chunk-group" role="tabpanel">
-                  <div className="data-chunk-group-head">
-                    <button type="button" className="secondary-button small" onClick={addAdditionalSection}>
-                      + Add a section
-                    </button>
-                  </div>
-                  <p className="data-section-hint data-additional-hint">
-                    Each section has a title and a list of items.
-                  </p>
-                  {(data.additional ?? []).map((sec, si) => (
-                    <div key={sec.id} className="data-chunk-card data-chunk-additional">
-                      <div className="data-chunk-additional-head">
-                        <input
-                          type="text"
-                          value={sec.title}
-                          onChange={(e) => updateAdditionalSectionTitle(si, e.target.value)}
-                          placeholder="Section title (e.g. Community & Sports)"
-                          className="data-chunk-additional-title"
-                        />
-                        <button
-                          type="button"
-                          className="data-chunk-remove"
-                          onClick={() => removeAdditionalSection(si)}
-                          title="Remove section"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <div className="data-chunk-additional-content">
-                        {sec.content.map((item, ii) => (
-                          <div key={ii} className="data-chunk-additional-item">
-                            <input
-                              type="text"
-                              value={item}
-                              onChange={(e) => updateAdditionalSectionItem(si, ii, e.target.value)}
-                              placeholder="One line"
-                            />
-                            <button
-                              type="button"
-                              className="data-chunk-remove small"
-                              onClick={() => removeAdditionalSectionItem(si, ii)}
-                              title="Remove"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          className="secondary-button small"
-                          onClick={() => addAdditionalSectionItem(si)}
-                        >
-                          + Add item
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {activeTab === 'experience' && <ExperiencePanel data={data} h={handlers} />}
+              {activeTab === 'education' && <EducationPanel data={data} h={handlers} />}
+              {activeTab === 'achievements' && <AchievementsPanel data={data} h={handlers} />}
+              {activeTab === 'skills' && <SkillsPanel data={data} h={handlers} newSkillName={newSkillName} setNewSkillName={setNewSkillName} />}
+              {activeTab === 'languages' && <LanguagesPanel data={data} h={handlers} />}
+              {activeTab === 'additional' && <AdditionalPanel data={data} h={handlers} />}
             </div>
           </>
         )}

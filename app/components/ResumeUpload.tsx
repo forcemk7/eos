@@ -54,8 +54,8 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
 
       setStatus('Done.')
       onSuccess()
-    } catch (err: any) {
-      setStatus(err.message || 'Something went wrong.')
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : 'Something went wrong.')
       setError(true)
     }
   }

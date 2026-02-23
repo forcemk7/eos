@@ -70,7 +70,7 @@ export function applyResumeSuggestion(
         sort_order: i,
       }))
     } else {
-      ;(next.experience[idx] as any)[field] = suggestedValue
+      ;(next.experience[idx] as Record<string, unknown>)[field] = suggestedValue
     }
     return next
   }
