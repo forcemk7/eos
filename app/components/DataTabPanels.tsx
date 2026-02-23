@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import type { ResumeData } from '@/lib/profile'
+import { LANGUAGE_LEVELS } from '@/lib/profile'
 
 export interface DataTabHandlers {
-  updateIdentity: (field: keyof Omit<ResumeData['identity'], 'links'>, value: string) => void
-  updateLink: (index: number, field: 'label' | 'url', value: string) => void
-  addLink: () => void
+  updateIdentity: (field: keyof ResumeData['identity'], value: string) => void
+  updateLink: (index: number, url: string) => void
+  addLink: (url?: string) => void
   removeLink: (index: number) => void
   updateSummary: (value: string) => void
   updateExperience: (index: number, field: 'title' | 'company' | 'dates', value: string) => void
@@ -54,20 +56,59 @@ export function ContactPanel({ data, h }: { data: ResumeData; h: DataTabHandlers
           <label>Location</label>
           <input type="text" value={data.identity.location} onChange={(e) => h.updateIdentity('location', e.target.value)} placeholder="City, State / Country" />
         </div>
-        <div className="data-chunk-field">
-          <div className="data-chunk-links-head">
-            <span className="data-chunk-field-label">Links</span>
-            <button type="button" className="secondary-button small" onClick={h.addLink}>+ Add link</button>
-          </div>
-          {(data.identity.links ?? []).map((link, i) => (
-            <div key={i} className="data-chunk-link-row">
-              <input type="text" value={link.label} onChange={(e) => h.updateLink(i, 'label', e.target.value)} placeholder="Label (e.g. LinkedIn)" className="data-chunk-link-label" />
-              <input type="url" value={link.url} onChange={(e) => h.updateLink(i, 'url', e.target.value)} placeholder="https://..." className="data-chunk-link-url" />
-              <button type="button" className="data-chunk-remove small" onClick={() => h.removeLink(i)} title="Remove link">×</button>
-            </div>
-          ))}
-        </div>
       </div>
+    </div>
+  )
+}
+
+export function LinksPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
+  const [newUrl, setNewUrl] = useState('')
+  const links = data.links ?? []
+  const handleAdd = () => {
+    const u = newUrl.trim()
+    if (u) h.addLink(u)
+    setNewUrl('')
+  }
+  return (
+    <div className="data-chunk-group links-panel" role="tabpanel">
+      <div className="links-panel-header">
+        <h3 className="links-panel-title">URLs</h3>
+        <p className="links-panel-desc">LinkedIn, portfolio, GitHub—any relevant links in one place.</p>
+      </div>
+      <div className="links-add-row">
+        <input
+          type="url"
+          className="links-input"
+          placeholder="Paste or type URL…"
+          value={newUrl}
+          onChange={(e) => setNewUrl(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}
+        />
+        <button type="button" className="links-add-btn" onClick={handleAdd}>
+          Add
+        </button>
+      </div>
+      {links.length === 0 ? (
+        <p className="links-empty">No links yet. Add your LinkedIn, portfolio, or other URLs above.</p>
+      ) : (
+        <ul className="links-list">
+          {links.map((link, i) => (
+            <li key={i} className="links-list-item">
+              <input
+                type="url"
+                value={link.url}
+                onChange={(e) => h.updateLink(i, e.target.value)}
+                className="links-list-edit"
+                placeholder="https://…"
+              />
+              <a href={link.url} target="_blank" rel="noopener noreferrer" className="links-list-open" title="Open">↗</a>
+              <button type="button" className="links-remove" onClick={() => h.removeLink(i)} title="Remove" aria-label="Remove link">
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -185,7 +226,16 @@ export function LanguagesPanel({ data, h }: { data: ResumeData; h: DataTabHandle
         <div key={lang.id} className="data-chunk-card data-chunk-language">
           <div className="data-chunk-lang-row">
             <input type="text" value={lang.language} onChange={(e) => h.updateLanguage(i, 'language', e.target.value)} placeholder="Language" />
-            <input type="text" value={lang.level} onChange={(e) => h.updateLanguage(i, 'level', e.target.value)} placeholder="Level (e.g. Native, Fluent, Intermediate)" className="data-chunk-lang-level" />
+            <select
+              value={LANGUAGE_LEVELS.includes(lang.level as typeof LANGUAGE_LEVELS[number]) ? lang.level : 'other'}
+              onChange={(e) => h.updateLanguage(i, 'level', e.target.value)}
+              className="data-chunk-lang-level"
+              title="Proficiency level"
+            >
+              {LANGUAGE_LEVELS.map((lvl) => (
+                <option key={lvl} value={lvl}>{lvl.charAt(0).toUpperCase() + lvl.slice(1)}</option>
+              ))}
+            </select>
             <button type="button" className="data-chunk-remove" onClick={() => h.removeLanguage(i)} title="Remove">×</button>
           </div>
         </div>

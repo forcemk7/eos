@@ -4,6 +4,7 @@ import pdfParse from 'pdf-parse'
 import mammoth from 'mammoth'
 import { v4 as uuidv4 } from 'uuid'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { normalizeParsedOutput } from '@/lib/profile'
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({
@@ -36,11 +37,14 @@ async function parseResumeWithOpenAI(text: string) {
   }
 
   const systemPrompt =
-    'You are a resume parser. Given raw resume text, you output clean, structured JSON with this exact shape: ' +
-    '{ identity: { name: string, email: string, location: string, links: string[] }, ' +
-    'summary: string, experience: [{ title: string, company: string, dates: string, bullets: string[] }], ' +
-    'skills: string[] }. ' +
-    'Only output valid JSON. Do not wrap it in markdown.'
+    'You are a resume parser. Given raw resume text, output clean, structured JSON with this exact shape. ' +
+    'identity: { name, email, phone, location, links: string[] } — links is an array of URLs only (e.g. LinkedIn, portfolio, GitHub). ' +
+    'experience: [{ title, company, dates (display string e.g. "Jan 2020 – Present"), start_date (YYYY-MM-DD or null), end_date (YYYY-MM-DD or null), bullets: string[] }]. ' +
+    'education: [{ institution, degree, field_of_study, dates, start_date, end_date (same as experience) }]. ' +
+    'achievements: [{ title, issuer, date (ISO YYYY-MM-DD when possible) }]. ' +
+    'skills: string[]. languages: [{ language, level }] where level is exactly one of: native, fluent, advanced, intermediate, basic, other. ' +
+    'additional: [{ title, content: string[] }]. summary: string. ' +
+    'Use empty strings or empty arrays for missing fields. Only output valid JSON, no markdown.'
 
   const userPrompt = `Here is the resume text:\n\n${text}\n\nReturn only JSON.`
 
@@ -55,7 +59,7 @@ async function parseResumeWithOpenAI(text: string) {
 
   const content = response.choices[0].message.content
   const parsed = JSON.parse(content || '{}')
-  return parsed
+  return normalizeParsedOutput(parsed) as Record<string, unknown>
 }
 
 export async function POST(req: NextRequest) {

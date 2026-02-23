@@ -5,13 +5,14 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AssembledProfilePayload } from './profile'
+import { formatDateRange, normalizeLanguageLevel } from './profile'
 
 export async function runSyncProfile(
   supabase: SupabaseClient,
   userId: string,
   payload: AssembledProfilePayload
 ): Promise<void> {
-  const { identity, summary, experience, skills, education = [], achievements = [], languages = [], additional = [] } = payload
+  const { identity, links = [], summary, experience, skills, education = [], achievements = [], languages = [], additional = [] } = payload
 
   const { error: profileError } = await supabase.from('profiles').upsert(
     {
@@ -27,6 +28,13 @@ export async function runSyncProfile(
     throw new Error('Profile sync failed')
   }
 
+  await supabase.from('profile_links').delete().eq('user_id', userId)
+  for (let i = 0; i < links.length; i++) {
+    const url = (links[i] && typeof links[i] === 'object' && 'url' in links[i] ? (links[i] as { url: string }).url : String(links[i] ?? '')).trim()
+    if (!url) continue
+    await supabase.from('profile_links').insert({ user_id: userId, url, sort_order: i })
+  }
+
   const { data: existingWorkRows } = await supabase
     .from('experience')
     .select('id')
@@ -39,13 +47,16 @@ export async function runSyncProfile(
     const workId = exp.id && existingWorkIds.has(exp.id) ? exp.id : crypto.randomUUID()
     payloadWorkIds.push(workId)
 
+    const expDates = exp.dates ?? formatDateRange(exp)
     if (existingWorkIds.has(workId)) {
       await supabase
         .from('experience')
         .update({
           company: exp.company ?? '',
           title: exp.title ?? '',
-          dates: exp.dates ?? '',
+          dates: expDates,
+          start_date: exp.start_date ?? null,
+          end_date: exp.end_date ?? null,
           sort_order: i,
         })
         .eq('id', workId)
@@ -56,7 +67,9 @@ export async function runSyncProfile(
         user_id: userId,
         company: exp.company ?? '',
         title: exp.title ?? '',
-        dates: exp.dates ?? '',
+        dates: expDates,
+        start_date: exp.start_date ?? null,
+        end_date: exp.end_date ?? null,
         sort_order: i,
       })
     }
@@ -117,6 +130,7 @@ export async function runSyncProfile(
     const e = education[i]
     const eid = e.id && existingEduIds.has(e.id) ? e.id : crypto.randomUUID()
     eduIdsToKeep.push(eid)
+    const eduDates = e.dates ?? formatDateRange(e)
     if (existingEduIds.has(eid)) {
       await supabase
         .from('education')
@@ -124,7 +138,9 @@ export async function runSyncProfile(
           institution: e.institution ?? '',
           degree: e.degree ?? '',
           field_of_study: e.field_of_study ?? '',
-          dates: e.dates ?? '',
+          dates: eduDates,
+          start_date: e.start_date ?? null,
+          end_date: e.end_date ?? null,
           sort_order: i,
         })
         .eq('id', eid)
@@ -136,7 +152,9 @@ export async function runSyncProfile(
         institution: e.institution ?? '',
         degree: e.degree ?? '',
         field_of_study: e.field_of_study ?? '',
-        dates: e.dates ?? '',
+        dates: eduDates,
+        start_date: e.start_date ?? null,
+        end_date: e.end_date ?? null,
         sort_order: i,
       })
     }
@@ -180,10 +198,11 @@ export async function runSyncProfile(
     const l = languages[i]
     const lid = l.id && existingLangIds.has(l.id) ? l.id : crypto.randomUUID()
     langIdsToKeep.push(lid)
+    const levelNorm = normalizeLanguageLevel(l.level)
     if (existingLangIds.has(lid)) {
       await supabase
         .from('languages')
-        .update({ language: l.language ?? '', level: l.level ?? '', sort_order: i })
+        .update({ language: l.language ?? '', level: levelNorm, sort_order: i })
         .eq('id', lid)
         .eq('user_id', userId)
     } else {
@@ -191,7 +210,7 @@ export async function runSyncProfile(
         id: lid,
         user_id: userId,
         language: l.language ?? '',
-        level: l.level ?? '',
+        level: levelNorm,
         sort_order: i,
       })
     }

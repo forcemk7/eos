@@ -5,6 +5,7 @@ import type { ResumeData } from '@/lib/profile'
 import { normalizedResumeData, genId } from '@/lib/profile'
 import {
   ContactPanel,
+  LinksPanel,
   SummaryPanel,
   ExperiencePanel,
   EducationPanel,
@@ -33,7 +34,7 @@ export default function DataTab({
   const [pastedText, setPastedText] = useState('')
   const [newSkillName, setNewSkillName] = useState('')
   const [activeTab, setActiveTab] = useState<
-    'contact' | 'summary' | 'experience' | 'education' | 'achievements' | 'skills' | 'languages' | 'additional'
+    'contact' | 'links' | 'summary' | 'experience' | 'education' | 'achievements' | 'skills' | 'languages' | 'additional'
   >('contact')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -44,30 +45,24 @@ export default function DataTab({
   function updateIdentity(field: keyof Omit<ResumeData['identity'], 'links'>, value: string) {
     setData((d) => ({ ...d, identity: { ...d.identity, [field]: value } }))
   }
-  function updateLink(index: number, field: 'label' | 'url', value: string) {
+  function updateLink(index: number, url: string) {
     setData((d) => {
-      const links = [...(d.identity.links ?? [])]
+      const links = [...(d.links ?? [])]
       if (!links[index]) return d
-      links[index] = { ...links[index], [field]: value }
-      return { ...d, identity: { ...d.identity, links } }
+      links[index] = { ...links[index], url }
+      return { ...d, links }
     })
   }
-  function addLink() {
+  function addLink(url?: string) {
     setData((d) => ({
       ...d,
-      identity: {
-        ...d.identity,
-        links: [...(d.identity.links ?? []), { label: '', url: '' }],
-      },
+      links: [...(d.links ?? []), { url: url ?? '' }],
     }))
   }
   function removeLink(index: number) {
     setData((d) => ({
       ...d,
-      identity: {
-        ...d.identity,
-        links: (d.identity.links ?? []).filter((_, i) => i !== index),
-      },
+      links: (d.links ?? []).filter((_, i) => i !== index),
     }))
   }
   function updateSummary(value: string) {
@@ -383,6 +378,8 @@ export default function DataTab({
     data.identity.name ||
     data.identity.email ||
     data.identity.phone ||
+    data.identity.location ||
+    (data.links?.length ?? 0) > 0 ||
     data.summary ||
     data.experience.length > 0 ||
     (data.education?.length ?? 0) > 0 ||
@@ -393,6 +390,7 @@ export default function DataTab({
 
   const totalChunks =
     (data.summary ? 1 : 0) +
+    (data.links?.length ?? 0) +
     data.experience.length +
     data.experience.reduce((n, e) => n + e.bullets.length, 0) +
     (data.education?.length ?? 0) +
@@ -403,6 +401,7 @@ export default function DataTab({
 
   const tabs: { id: typeof activeTab; label: string }[] = [
     { id: 'contact', label: 'Contact' },
+    { id: 'links', label: 'Links' },
     { id: 'summary', label: 'Summary' },
     { id: 'experience', label: 'Experience' },
     { id: 'education', label: 'Education' },
@@ -527,6 +526,7 @@ export default function DataTab({
             </div>
             <div className="data-tab-panels">
               {activeTab === 'contact' && <ContactPanel data={data} h={handlers} />}
+              {activeTab === 'links' && <LinksPanel data={data} h={handlers} />}
               {activeTab === 'summary' && (
                 <div className="data-chunk-group" role="tabpanel">
                   <div className="data-chunk-card">

@@ -3,31 +3,28 @@ import OpenAI, { toFile } from 'openai'
 import pdfParse from 'pdf-parse'
 import mammoth from 'mammoth'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { normalizeParsedOutput } from '@/lib/profile'
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null
 
 const PARSER_SYSTEM =
-  'You are a career/resume data extractor. From the given content (text, transcript, or description of media), extract structured information about the person. Output valid JSON only, no markdown, with this exact shape: ' +
-  '{ identity: { name: string, email: string, phone: string, location: string, links: string[] or { label: string, url: string }[] }, summary: string, ' +
-  'experience: [{ title: string, company: string, dates: string, bullets: string[] }], ' +
-  'education: [{ institution: string, degree: string, field_of_study: string, dates: string }], ' +
-  'achievements: [{ title: string, issuer: string, date: string }], ' +
-  'skills: string[], ' +
-  'languages: [{ language: string, level: string }], ' +
-  'additional: [{ title: string, content: string[] }] }. ' +
-  'Use empty strings or empty arrays for missing fields. For languages use level e.g. Native, Fluent, Intermediate. For additional use title e.g. "Community & Sports", "Volunteer", and content as short bullet strings.'
+  'You are a career/resume data extractor. From the given content, extract structured information. Output valid JSON only, no markdown. ' +
+  'identity: { name, email, phone, location, links: string[] } — links is an array of URLs only (e.g. LinkedIn, portfolio, GitHub). ' +
+  'experience: [{ title, company, dates (display string), start_date (YYYY-MM-DD or null), end_date (YYYY-MM-DD or null), bullets: string[] }]. ' +
+  'education: [{ institution, degree, field_of_study, dates, start_date, end_date }]. ' +
+  'achievements: [{ title, issuer, date (ISO YYYY-MM-DD when possible) }]. ' +
+  'skills: string[]. languages: [{ language, level }] where level is exactly one of: native, fluent, advanced, intermediate, basic, other. ' +
+  'additional: [{ title, content: string[] }]. summary: string. Use empty strings or empty arrays for missing fields.'
 
 const VISION_SYSTEM =
-  'You are a career/resume data extractor. Look at this image (resume, certificate, screenshot, or document) and extract all structured career information. Output valid JSON only, no markdown, with this exact shape: ' +
-  '{ identity: { name: string, email: string, phone: string, location: string, links: string[] or { label: string, url: string }[] }, summary: string, ' +
-  'experience: [{ title: string, company: string, dates: string, bullets: string[] }], ' +
-  'education: [{ institution: string, degree: string, field_of_study: string, dates: string }], ' +
-  'achievements: [{ title: string, issuer: string, date: string }], ' +
-  'skills: string[], ' +
-  'languages: [{ language: string, level: string }], ' +
-  'additional: [{ title: string, content: string[] }] }. Use empty strings or empty arrays for missing fields.'
+  'You are a career/resume data extractor. Extract all career information from this image. Output valid JSON only, no markdown. ' +
+  'identity: { name, email, phone, location, links: string[] } — links is an array of URLs only. ' +
+  'experience: [{ title, company, dates, start_date (YYYY-MM-DD or null), end_date, bullets }]. ' +
+  'education: [{ institution, degree, field_of_study, dates, start_date, end_date }]. ' +
+  'achievements: [{ title, issuer, date }]. skills: string[]. languages: [{ language, level }] with level one of: native, fluent, advanced, intermediate, basic, other. ' +
+  'additional: [{ title, content: string[] }]. summary: string. Use empty strings or empty arrays for missing fields.'
 
 async function parseTextWithLLM(text: string): Promise<Record<string, unknown>> {
   if (!openai) throw new Error('OPENAI_API_KEY is not set.')
@@ -40,7 +37,7 @@ async function parseTextWithLLM(text: string): Promise<Record<string, unknown>> 
     response_format: { type: 'json_object' },
   })
   const content = response.choices[0]?.message?.content
-  return JSON.parse(content || '{}')
+  return normalizeParsedOutput(JSON.parse(content || '{}') as Record<string, unknown>)
 }
 
 async function parseImageWithLLM(buffer: Buffer, mimeType: string): Promise<Record<string, unknown>> {
@@ -64,7 +61,8 @@ async function parseImageWithLLM(buffer: Buffer, mimeType: string): Promise<Reco
   const content = response.choices[0]?.message?.content
   if (!content) return {}
   const jsonMatch = content.match(/\{[\s\S]*\}/)
-  return jsonMatch ? JSON.parse(jsonMatch[0]) : {}
+  const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as Record<string, unknown>) : {}
+  return normalizeParsedOutput(parsed)
 }
 
 async function extractTextFromDocument(buffer: Buffer, mimeType: string): Promise<string> {

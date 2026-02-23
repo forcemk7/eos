@@ -19,7 +19,7 @@ export default function ResumePreview({ data, templateId, className = '' }: Resu
 }
 
 function ClassicLayout({ data, className }: { data: ResumeData; className: string }) {
-  const contact = [data.identity.email, data.identity.phone, data.identity.location, ...(data.identity.links || []).map((l) => (typeof l === 'string' ? l : l.url)).filter(Boolean)]
+  const contact = [data.identity.email, data.identity.phone, data.identity.location, ...(data.links || []).map((l) => (typeof l === 'string' ? l : l.url)).filter(Boolean)]
     .filter(Boolean)
     .join(' · ')
   return (
@@ -91,7 +91,7 @@ function ClassicLayout({ data, className }: { data: ResumeData; className: strin
 }
 
 function CompactLayout({ data, className }: { data: ResumeData; className: string }) {
-  const contact = [data.identity.email, data.identity.phone, data.identity.location, ...(data.identity.links || []).map((l) => (typeof l === 'string' ? l : l.url)).filter(Boolean)]
+  const contact = [data.identity.email, data.identity.phone, data.identity.location, ...(data.links || []).map((l) => (typeof l === 'string' ? l : l.url)).filter(Boolean)]
     .filter(Boolean)
     .join(' · ')
   return (

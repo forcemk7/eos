@@ -38,7 +38,8 @@ END $$;
 -- Skills, Languages, Additional. One profile per user; order via sort_order.
 --
 -- Schema mapping:
---   Contact     → profiles.identity (name, email, phone, location, links)
+--   Contact     → profiles.identity (name, email, phone, location only)
+--   Links       → profile_links (dedicated table)
 --   Summary     → profiles.summary
 --   Additional  → profiles.additional
 --   Experience  → experience + bullets
@@ -63,7 +64,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS profiles (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  identity JSONB NOT NULL DEFAULT '{"name":"","email":"","phone":"","location":"","links":[]}',
+  identity JSONB NOT NULL DEFAULT '{"name":"","email":"","phone":"","location":""}',
   summary TEXT NOT NULL DEFAULT '',
   additional JSONB NOT NULL DEFAULT '[]',
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -74,6 +75,54 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'additional') THEN
     ALTER TABLE profiles ADD COLUMN additional JSONB NOT NULL DEFAULT '[]';
   END IF;
+END $$;
+
+-- Links: dedicated table (not part of contact)
+CREATE TABLE IF NOT EXISTS profile_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  url TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_profile_links_user_id ON profile_links(user_id);
+CREATE INDEX IF NOT EXISTS idx_profile_links_user_sort ON profile_links(user_id, sort_order);
+
+ALTER TABLE profile_links ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'profile_links_select_own' AND tablename = 'profile_links') THEN
+    CREATE POLICY "profile_links_select_own" ON profile_links FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'profile_links_insert_own' AND tablename = 'profile_links') THEN
+    CREATE POLICY "profile_links_insert_own" ON profile_links FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'profile_links_update_own' AND tablename = 'profile_links') THEN
+    CREATE POLICY "profile_links_update_own" ON profile_links FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'profile_links_delete_own' AND tablename = 'profile_links') THEN
+    CREATE POLICY "profile_links_delete_own" ON profile_links FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Migrate links from identity JSONB to profile_links (run once for existing data)
+DO $$
+BEGIN
+  INSERT INTO profile_links (user_id, url, sort_order)
+  SELECT sub.user_id, sub.url, sub.sort_order
+  FROM (
+    SELECT p.user_id,
+           COALESCE(NULLIF(trim(elem->>'url'), ''), NULLIF(trim(elem #>> '{}'), '')) AS url,
+           (ord - 1)::INT AS sort_order
+    FROM profiles p,
+         jsonb_array_elements(p.identity->'links') WITH ORDINALITY AS arr(elem, ord)
+    WHERE p.identity ? 'links' AND jsonb_typeof(p.identity->'links') = 'array'
+  ) sub
+  WHERE sub.url IS NOT NULL AND sub.url <> '';
+  UPDATE profiles SET identity = identity - 'links' WHERE identity ? 'links';
+EXCEPTION WHEN OTHERS THEN
+  NULL;
 END $$;
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -118,6 +167,17 @@ DO $$ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'experience_delete_own' AND tablename = 'experience') THEN
     CREATE POLICY "experience_delete_own" ON experience FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Structured dates for experience (dates TEXT kept for display fallback)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'experience' AND column_name = 'start_date') THEN
+    ALTER TABLE experience ADD COLUMN start_date DATE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'experience' AND column_name = 'end_date') THEN
+    ALTER TABLE experience ADD COLUMN end_date DATE;
   END IF;
 END $$;
 
@@ -216,6 +276,17 @@ DO $$ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'education_delete_own' AND tablename = 'education') THEN
     CREATE POLICY "education_delete_own" ON education FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Structured dates for education (dates TEXT kept for display fallback)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'education' AND column_name = 'start_date') THEN
+    ALTER TABLE education ADD COLUMN start_date DATE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'education' AND column_name = 'end_date') THEN
+    ALTER TABLE education ADD COLUMN end_date DATE;
   END IF;
 END $$;
 

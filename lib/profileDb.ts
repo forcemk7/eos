@@ -7,9 +7,21 @@ import type {
   AssembledProfile,
   AssembledProfilePayload,
   Identity,
+  ProfileLink,
 } from './profile'
-import { DEFAULT_IDENTITY, normalizeLinks } from './profile'
+import { DEFAULT_IDENTITY, formatDateRange, inferLinkKindFromUrl, normalizeLanguageLevel, normalizeLinkKind, normalizeLinks } from './profile'
 import { runSyncProfile } from './profileDbSync'
+
+/** Merge identity (contact only): fill empty fields from incoming. */
+function mergeIdentity(current: Identity | null, incoming: Identity): Identity {
+  const cur = current ?? DEFAULT_IDENTITY
+  return {
+    name: (cur.name?.trim() ? cur.name : incoming.name?.trim()) || cur.name || '',
+    email: (cur.email?.trim() ? cur.email : incoming.email?.trim()) || cur.email || '',
+    phone: (cur.phone?.trim() ? cur.phone : incoming.phone?.trim()) || cur.phone || '',
+    location: (cur.location?.trim() ? cur.location : incoming.location?.trim()) || cur.location || '',
+  }
+}
 
 export async function assembleProfile(
   supabase: SupabaseClient,
@@ -23,17 +35,24 @@ export async function assembleProfile(
 
   if (profileError || !profileRow) return null
 
-  const rawIdentity = (profileRow.identity as Identity) ?? DEFAULT_IDENTITY
-  const identity = {
-    ...DEFAULT_IDENTITY,
-    ...rawIdentity,
-    phone: rawIdentity.phone ?? '',
-    links: normalizeLinks(rawIdentity.links ?? []),
+  const rawIdentity = (profileRow.identity as Record<string, unknown>) ?? {}
+  const identity: Identity = {
+    name: (rawIdentity.name as string) ?? '',
+    email: (rawIdentity.email as string) ?? '',
+    phone: (rawIdentity.phone as string) ?? '',
+    location: (rawIdentity.location as string) ?? '',
   }
+
+  const { data: linkRows, error: linkError } = await supabase
+    .from('profile_links')
+    .select('id, url, sort_order')
+    .eq('user_id', userId)
+    .order('sort_order', { ascending: true })
+  const links: ProfileLink[] = linkError ? [] : (linkRows ?? []).map((r) => ({ url: r.url ?? '', kind: inferLinkKindFromUrl(r.url ?? '') }))
 
   const { data: workRows, error: workError } = await supabase
     .from('experience')
-    .select('id, company, title, dates, sort_order')
+    .select('id, company, title, dates, start_date, end_date, sort_order')
     .eq('user_id', userId)
     .order('sort_order', { ascending: true })
 
@@ -42,6 +61,12 @@ export async function assembleProfile(
 
   const experience: AssembledProfile['experience'] = []
   for (const w of works) {
+    const row = w as { id: string; company: string; title: string; dates?: string; start_date?: string | null; end_date?: string | null; sort_order: number }
+    const datesStr = formatDateRange({
+      dates: row.dates,
+      start_date: row.start_date,
+      end_date: row.end_date,
+    })
     const { data: bulletRows } = await supabase
       .from('bullets')
       .select('id, text, sort_order')
@@ -54,10 +79,13 @@ export async function assembleProfile(
     }))
     experience.push({
       id: w.id,
-      title: w.title,
-      company: w.company,
-      dates: w.dates,
-      sort_order: w.sort_order,
+      title: row.title,
+      company: row.company,
+      dates: (datesStr || row.dates) ?? '',
+      start_date: row.start_date ?? null,
+      end_date: row.end_date ?? null,
+      dates_display: row.dates?.trim() && !row.start_date && !row.end_date ? row.dates : undefined,
+      sort_order: row.sort_order,
       bullets,
     })
   }
@@ -77,19 +105,30 @@ export async function assembleProfile(
 
   const { data: educationRows, error: educationError } = await supabase
     .from('education')
-    .select('id, institution, degree, field_of_study, dates, sort_order')
+    .select('id, institution, degree, field_of_study, dates, start_date, end_date, sort_order')
     .eq('user_id', userId)
     .order('sort_order', { ascending: true })
 
   if (educationError) return null
-  const education = (educationRows ?? []).map((e) => ({
-    id: e.id,
-    institution: e.institution ?? '',
-    degree: e.degree ?? '',
-    field_of_study: e.field_of_study ?? '',
-    dates: e.dates ?? '',
-    sort_order: e.sort_order,
-  }))
+  const education = (educationRows ?? []).map((e) => {
+    const row = e as { id: string; institution?: string; degree?: string; field_of_study?: string; dates?: string; start_date?: string | null; end_date?: string | null; sort_order: number }
+    const datesStr = formatDateRange({
+      dates: row.dates,
+      start_date: row.start_date,
+      end_date: row.end_date,
+    })
+    return {
+      id: row.id,
+      institution: row.institution ?? '',
+      degree: row.degree ?? '',
+      field_of_study: row.field_of_study ?? '',
+      dates: (datesStr || row.dates) ?? '',
+      start_date: row.start_date ?? null,
+      end_date: row.end_date ?? null,
+      dates_display: row.dates?.trim() && !row.start_date && !row.end_date ? row.dates : undefined,
+      sort_order: row.sort_order,
+    }
+  })
 
   const { data: achievementRows, error: achievementError } = await supabase
     .from('achievements')
@@ -116,7 +155,7 @@ export async function assembleProfile(
   const languages = (languageRows ?? []).map((l) => ({
     id: l.id,
     language: l.language ?? '',
-    level: l.level ?? '',
+    level: normalizeLanguageLevel(l.level),
     sort_order: l.sort_order,
   }))
 
@@ -132,6 +171,7 @@ export async function assembleProfile(
 
   return {
     identity,
+    links,
     summary: profileRow.summary ?? '',
     experience,
     education,
@@ -156,34 +196,49 @@ export async function syncProfile(
   }
 }
 
-/** Merge parsed document into existing profile. Adds new experience/bullets/skills/education/achievements/languages; updates identity/summary/additional. */
+/**
+ * Merge parsed document into existing profile.
+ * Semantics: Identity — fill empty fields from incoming; links matched by kind (update or append).
+ * Summary — overwrite if incoming non-empty. Experience — match by company+title (update or append).
+ * Education — match by institution+degree (update or append). Skills/Languages/Achievements — append if not present.
+ * Additional — merge by section title (append new sections, append items to existing).
+ */
 export async function mergeIntoProfile(
   supabase: SupabaseClient,
   userId: string,
   payload: AssembledProfilePayload
 ): Promise<AssembledProfile | null> {
   const current = await assembleProfile(supabase, userId)
-  const { identity, summary, experience, skills, education = [], achievements = [], languages = [], additional = [] } = payload
+  const { identity: incomingIdentity, links: payloadLinks = [], summary, experience, skills, education = [], achievements = [], languages = [], additional = [] } = payload
+
+  const mergedIdentity = mergeIdentity(current?.identity ?? null, incomingIdentity)
+  const mergedSummary = ((summary?.trim() ? summary : current?.summary?.trim()) || current?.summary) ?? ''
 
   const existingTitles = new Set((current?.additional ?? []).map((s) => s.title.toLowerCase()))
   const mergedAdditional = [...(current?.additional ?? [])]
   for (const s of additional) {
     const title = (typeof s === 'object' ? s.title : '').trim()
-    if (!title || existingTitles.has(title.toLowerCase())) continue
-    existingTitles.add(title.toLowerCase())
-    const sec = s as { id?: string; content?: string[] }
-    mergedAdditional.push({
-      id: sec.id ?? crypto.randomUUID(),
-      title,
-      content: Array.isArray(sec.content) ? sec.content : [],
-    })
+    if (!title) continue
+    const existing = mergedAdditional.find((x) => x.title.toLowerCase() === title.toLowerCase())
+    if (existing) {
+      const sec = s as { content?: string[] }
+      existing.content = [...existing.content, ...(Array.isArray(sec.content) ? sec.content : [])]
+    } else {
+      existingTitles.add(title.toLowerCase())
+      const sec = s as { id?: string; content?: string[] }
+      mergedAdditional.push({
+        id: sec.id ?? crypto.randomUUID(),
+        title,
+        content: Array.isArray(sec.content) ? sec.content : [],
+      })
+    }
   }
 
   const { error: profileError } = await supabase.from('profiles').upsert(
     {
       user_id: userId,
-      identity,
-      summary: summary ?? '',
+      identity: mergedIdentity,
+      summary: mergedSummary,
       additional: mergedAdditional,
       updated_at: new Date().toISOString(),
     },
@@ -194,27 +249,94 @@ export async function mergeIntoProfile(
     return null
   }
 
-  const maxSort = current?.experience?.length ?? 0
+  const curLinks = current?.links ?? []
+  const inLinks = normalizeLinks(payloadLinks)
+  const kindToIndex = new Map<string, number>()
+  curLinks.forEach((l, i) => kindToIndex.set(normalizeLinkKind(l), i))
+  const mergedLinks: ProfileLink[] = [...curLinks]
+  for (const link of inLinks) {
+    const k = normalizeLinkKind(link)
+    const linkWithKind: ProfileLink = { url: link.url, kind: k }
+    if (kindToIndex.has(k)) mergedLinks[kindToIndex.get(k)!] = linkWithKind
+    else {
+      mergedLinks.push(linkWithKind)
+      kindToIndex.set(k, mergedLinks.length - 1)
+    }
+  }
+  await supabase.from('profile_links').delete().eq('user_id', userId)
+  for (let i = 0; i < mergedLinks.length; i++) {
+    const l = mergedLinks[i]
+    if (!l.url?.trim()) continue
+    await supabase.from('profile_links').insert({
+      user_id: userId,
+      url: l.url.trim(),
+      sort_order: i,
+    })
+  }
+
+  const curExp = current?.experience ?? []
+  const expKey = (company: string, title: string) => `${(company ?? '').trim().toLowerCase()}|${(title ?? '').trim().toLowerCase()}`
+  const existingExpKeys = new Map(curExp.map((e, i) => [expKey(e.company, e.title), { id: e.id, sort_order: i }]))
+  let expSort = curExp.length
+
   for (let i = 0; i < experience.length; i++) {
     const exp = experience[i]
-    const workId = crypto.randomUUID()
-    await supabase.from('experience').insert({
-      id: workId,
-      user_id: userId,
-      company: exp.company ?? '',
-      title: exp.title ?? '',
-      dates: exp.dates ?? '',
-      sort_order: maxSort + i,
-    })
-    const bulletPayload = exp.bullets ?? []
-    for (let j = 0; j < bulletPayload.length; j++) {
-      const b = bulletPayload[j]
-      await supabase.from('bullets').insert({
-        id: crypto.randomUUID(),
-        experience_id: workId,
-        text: typeof b === 'string' ? b : (b.text ?? ''),
-        sort_order: j,
+    const company = exp.company ?? ''
+    const title = exp.title ?? ''
+    const key = expKey(company, title)
+    const existing = existingExpKeys.get(key)
+    const datesStr = exp.dates ?? formatDateRange(exp)
+
+    if (existing) {
+      await supabase
+        .from('experience')
+        .update({
+          company,
+          title,
+          dates: datesStr,
+          start_date: exp.start_date ?? null,
+          end_date: exp.end_date ?? null,
+          sort_order: existing.sort_order,
+        })
+        .eq('id', existing.id)
+        .eq('user_id', userId)
+
+      const { data: existingBullets } = await supabase.from('bullets').select('id').eq('experience_id', existing.id)
+      const nextBulletOrder = (existingBullets ?? []).length
+      const bulletPayload = exp.bullets ?? []
+      for (let j = 0; j < bulletPayload.length; j++) {
+        const b = bulletPayload[j]
+        const text = typeof b === 'string' ? b : (b.text ?? '')
+        if (!text.trim()) continue
+        await supabase.from('bullets').insert({
+          id: crypto.randomUUID(),
+          experience_id: existing.id,
+          text,
+          sort_order: nextBulletOrder + j,
+        })
+      }
+    } else {
+      const workId = crypto.randomUUID()
+      existingExpKeys.set(key, { id: workId, sort_order: expSort })
+      await supabase.from('experience').insert({
+        id: workId,
+        user_id: userId,
+        company,
+        title,
+        dates: datesStr,
+        start_date: exp.start_date ?? null,
+        end_date: exp.end_date ?? null,
+        sort_order: expSort++,
       })
+      for (let j = 0; j < (exp.bullets ?? []).length; j++) {
+        const b = exp.bullets![j]
+        await supabase.from('bullets').insert({
+          id: crypto.randomUUID(),
+          experience_id: workId,
+          text: typeof b === 'string' ? b : (b.text ?? ''),
+          sort_order: j,
+        })
+      }
     }
   }
 
@@ -222,8 +344,7 @@ export async function mergeIntoProfile(
   let skillSort = (current?.skills?.length ?? 0)
   for (const s of skills) {
     const name = (typeof s === 'string' ? s : s.name) ?? ''
-    if (!name.trim()) continue
-    if (existingNames.has(name.toLowerCase())) continue
+    if (!name.trim() || existingNames.has(name.toLowerCase())) continue
     existingNames.add(name.toLowerCase())
     await supabase.from('skills').insert({
       id: crypto.randomUUID(),
@@ -233,19 +354,56 @@ export async function mergeIntoProfile(
     })
   }
 
-  let eduSort = (current?.education?.length ?? 0)
+  const curEdu = current?.education ?? []
+  const eduKey = (inst: string, degree: string) => `${(inst ?? '').trim().toLowerCase()}|${(degree ?? '').trim().toLowerCase()}`
+  const existingEduKeys = new Map(curEdu.map((e, i) => [eduKey(e.institution, e.degree), { id: e.id, sort_order: i }]))
+  let eduSort = curEdu.length
+
   for (const e of education) {
-    const inst = (typeof e === 'object' ? e.institution : '') ?? ''
-    if (!inst.trim()) continue
-    await supabase.from('education').insert({
-      id: crypto.randomUUID(),
-      user_id: userId,
-      institution: inst.trim(),
-      degree: (typeof e === 'object' ? e.degree : '') ?? '',
-      field_of_study: (typeof e === 'object' ? e.field_of_study : '') ?? '',
-      dates: (typeof e === 'object' ? e.dates : '') ?? '',
-      sort_order: eduSort++,
-    })
+    const ed = (typeof e === 'object' && e !== null ? e : {}) as {
+      institution?: string
+      degree?: string
+      field_of_study?: string
+      dates?: string
+      start_date?: string | null
+      end_date?: string | null
+    }
+    const inst = (ed.institution ?? '').trim()
+    if (!inst) continue
+    const degree = (ed.degree ?? '').trim()
+    const key = eduKey(inst, degree)
+    const existing = existingEduKeys.get(key)
+    const datesStr = ed.dates ?? formatDateRange(ed)
+
+    if (existing) {
+      await supabase
+        .from('education')
+        .update({
+          institution: inst,
+          degree: ed.degree ?? '',
+          field_of_study: ed.field_of_study ?? '',
+          dates: datesStr,
+          start_date: ed.start_date ?? null,
+          end_date: ed.end_date ?? null,
+          sort_order: existing.sort_order,
+        })
+        .eq('id', existing.id)
+        .eq('user_id', userId)
+    } else {
+      const eid = crypto.randomUUID()
+      existingEduKeys.set(key, { id: eid, sort_order: eduSort })
+      await supabase.from('education').insert({
+        id: eid,
+        user_id: userId,
+        institution: inst,
+        degree: ed.degree ?? '',
+        field_of_study: ed.field_of_study ?? '',
+        dates: datesStr,
+        start_date: ed.start_date ?? null,
+        end_date: ed.end_date ?? null,
+        sort_order: eduSort++,
+      })
+    }
   }
 
   let achSort = (current?.achievements?.length ?? 0)
@@ -266,7 +424,8 @@ export async function mergeIntoProfile(
   const existingLangs = new Set((current?.languages ?? []).map((l) => `${l.language.toLowerCase()}:${l.level.toLowerCase()}`))
   for (const l of languages) {
     const lang = (typeof l === 'object' ? l.language : '') ?? ''
-    const level = (typeof l === 'object' ? l.level : '') ?? ''
+    const levelRaw = (typeof l === 'object' ? l.level : '') ?? ''
+    const level = normalizeLanguageLevel(levelRaw)
     if (!lang.trim()) continue
     const key = `${lang.toLowerCase()}:${level.toLowerCase()}`
     if (existingLangs.has(key)) continue
@@ -275,7 +434,7 @@ export async function mergeIntoProfile(
       id: crypto.randomUUID(),
       user_id: userId,
       language: lang.trim(),
-      level: level.trim(),
+      level,
       sort_order: langSort++,
     })
   }

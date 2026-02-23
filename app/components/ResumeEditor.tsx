@@ -68,27 +68,24 @@ export default function ResumeEditor({
   function updateIdentity(field: keyof Omit<ResumeData['identity'], 'links'>, value: string) {
     setData((d) => ({ ...d, identity: { ...d.identity, [field]: value } }))
   }
-  function updateLink(index: number, field: 'label' | 'url', value: string) {
+  function updateLink(index: number, url: string) {
     setData((d) => {
-      const links = [...(d.identity.links ?? [])]
+      const links = [...(d.links ?? [])]
       if (!links[index]) return d
-      links[index] = { ...links[index], [field]: value }
-      return { ...d, identity: { ...d.identity, links } }
+      links[index] = { ...links[index], url }
+      return { ...d, links }
     })
   }
-  function addLink() {
+  function addLink(url?: string) {
     setData((d) => ({
       ...d,
-      identity: { ...d.identity, links: [...(d.identity.links ?? []), { label: '', url: '' }] },
+      links: [...(d.links ?? []), { url: url ?? '' }],
     }))
   }
   function removeLink(index: number) {
     setData((d) => ({
       ...d,
-      identity: {
-        ...d.identity,
-        links: (d.identity.links ?? []).filter((_, i) => i !== index),
-      },
+      links: (d.links ?? []).filter((_, i) => i !== index),
     }))
   }
 
@@ -286,22 +283,16 @@ export default function ResumeEditor({
             <div className="field-group">
               <div className="field-group-row">
                 <label>Links</label>
-                <button type="button" className="secondary-button small" onClick={addLink}>
+                <button type="button" className="secondary-button small" onClick={() => addLink()}>
                   + Add link
                 </button>
               </div>
-              {(data.identity.links ?? []).map((link, i) => (
+              {(data.links ?? []).map((link, i) => (
                 <div key={i} className="field-group link-row">
-                  <input
-                    type="text"
-                    value={link.label}
-                    onChange={(e) => updateLink(i, 'label', e.target.value)}
-                    placeholder="Label"
-                  />
                   <input
                     type="url"
                     value={link.url}
-                    onChange={(e) => updateLink(i, 'url', e.target.value)}
+                    onChange={(e) => updateLink(i, e.target.value)}
                     placeholder="https://..."
                   />
                   <button type="button" className="small" onClick={() => removeLink(i)} title="Remove">

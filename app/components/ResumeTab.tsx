@@ -8,8 +8,8 @@ interface MasterResume {
     name: string
     email: string
     location: string
-    links: { label: string; url: string }[]
   }
+  links: { url: string }[]
   summary: string
   experience: Array<{
     title: string
@@ -24,23 +24,20 @@ const STORAGE_KEY_MASTER = 'eOS_masterResume'
 
 function parsedToMaster(parsed: { identity?: Record<string, unknown>; summary?: string; experience?: unknown[]; skills?: unknown[] }): MasterResume {
   const identity = (parsed?.identity ?? {}) as Record<string, unknown>
+  const rawLinks = (identity.links ?? (parsed as { links?: unknown[] }).links) ?? []
+  const links = Array.isArray(rawLinks)
+    ? rawLinks.map((item: unknown) => {
+        const url = typeof item === 'string' ? item : (item && typeof item === 'object' && item !== null && 'url' in item ? (item as { url?: string }).url : '')
+        return { url: typeof url === 'string' ? url : '' }
+      })
+    : []
   return {
     identity: {
       name: (identity.name as string) || '',
       email: (identity.email as string) || '',
       location: (identity.location as string) || '',
-      links: (() => {
-        const raw = identity.links
-        if (!Array.isArray(raw)) return []
-        return raw.map((item: unknown) => {
-          if (item && typeof item === 'object' && item !== null && 'url' in item) {
-            const o = item as { label?: string; url?: string }
-            return { label: typeof o.label === 'string' ? o.label : '', url: typeof o.url === 'string' ? o.url : '' }
-          }
-          return { label: '', url: typeof item === 'string' ? item : '' }
-        })
-      })(),
     },
+    links,
     summary: (parsed?.summary as string) || '',
     experience: Array.isArray(parsed?.experience) ? (parsed.experience as MasterResume['experience']) : [],
     skills: Array.isArray(parsed?.skills) ? (parsed.skills as string[]) : [],
@@ -242,12 +239,11 @@ export default function ResumeTab() {
                   {masterResume.identity?.location
                     ? `${masterResume.identity?.email ? ' • ' : ''}${masterResume.identity.location}`
                     : ''}
-                  {masterResume.identity?.links && masterResume.identity.links.length
-                    ? `${masterResume.identity?.email || masterResume.identity?.location ? ' • ' : ''}${masterResume.identity.links
+                  {masterResume.links?.length
+                    ? `${masterResume.identity?.email || masterResume.identity?.location ? ' • ' : ''}${masterResume.links
                         .map((l) => {
                           const url = typeof l === 'string' ? l : l.url
-                          const text = (typeof l === 'string' ? l : (l.label || l.url))
-                          return url ? `<a href="${escapeHtml(url)}" target="_blank">${escapeHtml(text)}</a>` : ''
+                          return url ? `<a href="${escapeHtml(url)}" target="_blank">${escapeHtml(url)}</a>` : ''
                         })
                         .filter(Boolean)
                         .join(' • ')}`

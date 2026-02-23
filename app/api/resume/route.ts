@@ -61,8 +61,20 @@ function normalizePayload(body: { parsed?: unknown } | ParsedInput): AssembledPr
     title: (s.title as string) ?? '',
     content: Array.isArray(s.content) ? (s.content as string[]) : [],
   }))
-  const identityWithPhone = { ...identity, phone: (identity.phone as string) ?? '' }
-  return { identity: identityWithPhone as AssembledProfilePayload['identity'], summary, experience, education, achievements, skills, languages, additional }
+  const identityOnly = {
+    name: (identity.name as string) ?? '',
+    email: (identity.email as string) ?? '',
+    phone: (identity.phone as string) ?? '',
+    location: (identity.location as string) ?? '',
+  }
+  const rawLinks = (parsed.links ?? identity.links) ?? []
+  const links = Array.isArray(rawLinks)
+    ? rawLinks.map((item: unknown) => {
+        const url = typeof item === 'string' ? item : (item && typeof item === 'object' && 'url' in item ? (item as { url: string }).url : '')
+        return { url: typeof url === 'string' ? url : '' }
+      })
+    : []
+  return { identity: identityOnly, links, summary, experience, education, achievements, skills, languages, additional }
 }
 
 export async function GET(req: NextRequest) {

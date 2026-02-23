@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import type { ResumeData } from '@/lib/profile'
-import { linkUrls } from '@/lib/profile'
+import { formatDateRange, linkUrls } from '@/lib/profile'
 import type { TemplateId } from '@/app/components/ResumePreview'
 
 const MARGIN = 20
@@ -30,7 +30,7 @@ function exportClassicPdf(data: ResumeData, filename: string) {
     doc.text(data.identity.name, MARGIN, y)
     y += 10
   }
-  const contact = [data.identity.email, data.identity.phone, data.identity.location, ...linkUrls(data.identity.links || [])]
+  const contact = [data.identity.email, data.identity.phone, data.identity.location, ...linkUrls(data.links || [])]
     .filter(Boolean)
     .join('  •  ')
   if (contact) {
@@ -70,10 +70,11 @@ function exportClassicPdf(data: ResumeData, filename: string) {
         doc.text(title, MARGIN, y)
         y += 5
       }
-      if (exp.dates) {
+      const datesStr = exp.dates || formatDateRange(exp)
+      if (datesStr) {
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
-        doc.text(exp.dates, MARGIN, y)
+        doc.text(datesStr, MARGIN, y)
         y += 5
       }
       if (exp.bullets?.length) {
@@ -171,7 +172,7 @@ function exportCompactPdf(data: ResumeData, filename: string) {
   }
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
-  const contact = [data.identity.email, data.identity.phone, data.identity.location, ...linkUrls(data.identity.links || [])]
+  const contact = [data.identity.email, data.identity.phone, data.identity.location, ...linkUrls(data.links || [])]
     .filter(Boolean)
     .join(' · ')
   if (contact) {
@@ -227,10 +228,11 @@ function exportCompactPdf(data: ResumeData, filename: string) {
         doc.text(title, mainLeft, yMain)
         yMain += 4
       }
-      if (exp.dates) {
+      const expDatesStr = exp.dates || formatDateRange(exp)
+      if (expDatesStr) {
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(8)
-        doc.text(exp.dates, mainLeft, yMain)
+        doc.text(expDatesStr, mainLeft, yMain)
         yMain += 4
       }
       if (exp.bullets?.length) {

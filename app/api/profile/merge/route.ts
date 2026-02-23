@@ -10,12 +10,16 @@ function toPayload(parsed: unknown): AssembledProfilePayload | null {
   if (!assembled) return null
   return {
     identity: assembled.identity,
+    links: assembled.links ?? [],
     summary: assembled.summary,
     experience: assembled.experience.map((e) => ({
       id: e.id,
       title: e.title,
       company: e.company,
       dates: e.dates,
+      start_date: e.start_date ?? null,
+      end_date: e.end_date ?? null,
+      dates_display: e.dates_display,
       sort_order: e.sort_order,
       bullets: e.bullets.map((b) => ({ id: b.id, text: b.text, sort_order: b.sort_order })),
     })),
@@ -25,6 +29,9 @@ function toPayload(parsed: unknown): AssembledProfilePayload | null {
       degree: e.degree,
       field_of_study: e.field_of_study,
       dates: e.dates,
+      start_date: e.start_date ?? null,
+      end_date: e.end_date ?? null,
+      dates_display: e.dates_display,
       sort_order: e.sort_order,
     })),
     achievements: assembled.achievements.map((a) => ({

@@ -29,12 +29,12 @@ export function applyResumeSuggestion(
     next.identity.location = suggestedValue
     return next
   }
-  if (path === 'identity.links') {
-    next.identity.links = suggestedValue
+  if (path === 'links') {
+    next.links = suggestedValue
       .split('\n')
       .map((s) => s.trim())
       .filter(Boolean)
-      .map((url) => ({ label: '', url }))
+      .map((url) => ({ url }))
     return next
   }
   if (path === 'summary') {

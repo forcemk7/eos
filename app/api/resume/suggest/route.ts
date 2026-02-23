@@ -19,7 +19,7 @@ const VALID_PATHS = new Set([
   'identity.name',
   'identity.email',
   'identity.location',
-  'identity.links',
+  'links',
   'summary',
   'skills',
   ...Array.from({ length: 20 }, (_, i) => `experience.${i}.title`),
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = `You are an expert resume coach. Your goal is to help the candidate get past screening (including ATS) and look strong to human recruiters. You do NOT rewrite the whole resume; you output a short list of discrete, actionable edits.
 
 Output a JSON array of suggestions. Each suggestion has:
-- "path": one of these exact paths: identity.name, identity.email, identity.location, identity.links, summary, skills, experience.0.title, experience.0.company, experience.0.dates, experience.0.bullets, experience.1.title, ... (use the correct index for each experience entry). For "identity.links" use newline-separated values. For "experience.N.bullets" use newline-separated bullet strings. For "skills" use comma-separated.
+- "path": one of these exact paths: identity.name, identity.email, identity.location, links, summary, skills, experience.0.title, experience.0.company, experience.0.dates, experience.0.bullets, experience.1.title, ... (use the correct index for each experience entry). For "links" use newline-separated URLs. For "experience.N.bullets" use newline-separated bullet strings. For "skills" use comma-separated.
 - "currentValue": the exact current string at that path (as the candidate has it).
 - "suggestedValue": your improved version (same format: newline for bullets/links, comma for skills).
 - "reason": one short sentence why this change helps (e.g. "Stronger action verb; more quantifiable" or "ATS keyword from job description").
