@@ -1,10 +1,45 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
-export interface JobListing {
-  id: string
-  user_id: string
+const STORAGE_KEY = 'earnOS_jobs_params'
+const DEFAULT_QUERY = 'jobs'
+
+interface StoredParams {
+  q: string
+  location: string
+  remoteOnly: boolean
+}
+
+function loadParams(): StoredParams {
+  if (typeof window === 'undefined') {
+    return { q: '', location: '', remoteOnly: true }
+  }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return { q: '', location: '', remoteOnly: true }
+    const parsed = JSON.parse(raw) as Partial<StoredParams>
+    return {
+      q: typeof parsed.q === 'string' ? parsed.q : '',
+      location: typeof parsed.location === 'string' ? parsed.location : '',
+      remoteOnly: typeof parsed.remoteOnly === 'boolean' ? parsed.remoteOnly : true,
+    }
+  } catch {
+    return { q: '', location: '', remoteOnly: true }
+  }
+}
+
+function saveParams(params: StoredParams) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(params))
+  } catch {
+    // ignore
+  }
+}
+
+/** Discovery result from JSearch (no id/user_id/created_at/updated_at/status). */
+export interface DiscoverListing {
   external_id: string | null
   source: string
   title: string
@@ -16,332 +51,126 @@ export interface JobListing {
   snippet: string | null
   posted_at: string | null
   raw: Record<string, unknown>
-  status: string
-  created_at: string
-  updated_at: string
 }
 
-const STATUS_SAVED = 'saved'
-const STATUS_DISMISSED = 'dismissed'
-
 export default function JobsTab() {
-  const [listings, setListings] = useState<JobListing[]>([])
-  const [loading, setLoading] = useState(true)
+  const [q, setQ] = useState('')
+  const [location, setLocation] = useState('')
+  const [remoteOnly, setRemoteOnly] = useState(true)
+  const [listings, setListings] = useState<DiscoverListing[]>([])
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [filterStatus, setFilterStatus] = useState<string>(STATUS_SAVED)
-  const [filterQ, setFilterQ] = useState('')
-  const [filterLocation, setFilterLocation] = useState('')
-  const [filterRemote, setFilterRemote] = useState(false)
-  const [addMode, setAddMode] = useState<'manual' | 'paste'>('manual')
-  const [addUrl, setAddUrl] = useState('')
-  const [addPaste, setAddPaste] = useState('')
-  const [addTitle, setAddTitle] = useState('')
-  const [addCompany, setAddCompany] = useState('')
-  const [addLocation, setAddLocation] = useState('')
-  const [addRemote, setAddRemote] = useState(false)
-  const [extractLoading, setExtractLoading] = useState(false)
-  const [saveLoading, setSaveLoading] = useState(false)
-  const [extracted, setExtracted] = useState<Partial<JobListing> | null>(null)
+  const [hasSearched, setHasSearched] = useState(false)
+  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null)
 
-  const loadListings = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const params = new URLSearchParams()
-      if (filterStatus) params.set('status', filterStatus)
-      if (filterQ) params.set('q', filterQ)
-      if (filterLocation) params.set('location', filterLocation)
-      if (filterRemote) params.set('remote', 'true')
-      const res = await fetch(`/api/jobs?${params.toString()}`, { credentials: 'include' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to load jobs')
-      setListings(data.listings ?? [])
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load')
-      setListings([])
-    } finally {
-      setLoading(false)
-    }
-  }, [filterStatus, filterQ, filterLocation, filterRemote])
+  const search = useCallback(
+    async (query: string, loc: string, remote: boolean) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const params = new URLSearchParams()
+        params.set('q', query.trim() || DEFAULT_QUERY)
+        if (loc.trim()) params.set('location', loc.trim())
+        if (remote) params.set('remote', 'true')
+        const res = await fetch(`/api/jobs/discover?${params.toString()}`, { credentials: 'include' })
+        const data = await res.json()
 
+        if (data.usage) setUsage({ used: data.usage.used, limit: data.usage.limit })
+
+        if (!res.ok) {
+          const msg = data.error || 'Failed to load listings'
+          throw new Error(msg)
+        }
+        setListings(data.listings ?? [])
+        setHasSearched(true)
+        saveParams({ q: query.trim() || '', location: loc.trim(), remoteOnly: remote })
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load')
+        setListings([])
+        setHasSearched(true)
+      } finally {
+        setLoading(false)
+      }
+    },
+    []
+  )
+
+  // First load: show listings (from cache or one API call) using stored or default params
   useEffect(() => {
-    loadListings()
-  }, [loadListings])
+    const stored = loadParams()
+    setQ(stored.q)
+    setLocation(stored.location)
+    setRemoteOnly(stored.remoteOnly)
+    search(stored.q || DEFAULT_QUERY, stored.location, stored.remoteOnly)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
 
-  async function handleExtract() {
-    if (!addPaste.trim()) return
-    setExtractLoading(true)
-    setError(null)
-    setExtracted(null)
-    try {
-      const res = await fetch('/api/jobs/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: addPaste.trim(), url: addUrl.trim() || undefined }),
-        credentials: 'include',
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Extraction failed')
-      setExtracted(data.listing ?? null)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Extraction failed')
-    } finally {
-      setExtractLoading(false)
-    }
+  function handleSearch() {
+    search(q, location, remoteOnly)
   }
 
-  async function handleSaveListing(payload: {
-    title: string
-    company: string
-    url?: string | null
-    location?: string | null
-    remote?: boolean
-    description?: string | null
-    snippet?: string | null
-    posted_at?: string | null
-  }) {
-    setSaveLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, source: extracted ? 'manual' : 'manual' }),
-        credentials: 'include',
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Save failed')
-      setAddUrl('')
-      setAddPaste('')
-      setAddTitle('')
-      setAddCompany('')
-      setAddLocation('')
-      setAddRemote(false)
-      setExtracted(null)
-      await loadListings()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed')
-    } finally {
-      setSaveLoading(false)
-    }
-  }
-
-  async function handleDismiss(id: string) {
-    try {
-      const res = await fetch(`/api/jobs/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: STATUS_DISMISSED }),
-        credentials: 'include',
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Update failed')
-      await loadListings()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Update failed')
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm('Remove this listing?')) return
-    try {
-      const res = await fetch(`/api/jobs/${id}`, { method: 'DELETE', credentials: 'include' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Delete failed')
-      await loadListings()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Delete failed')
-    }
-  }
-
-  const toSave =
-    addMode === 'paste' && extracted
-      ? {
-          title: extracted.title || addTitle.trim() || 'Untitled',
-          company: extracted.company || addCompany.trim() || 'Unknown',
-          url: (extracted.url ?? addUrl.trim()) || null,
-          location: (extracted.location ?? addLocation.trim()) || null,
-          remote: extracted.remote ?? addRemote,
-          description: extracted.description ?? null,
-          snippet: extracted.snippet ?? null,
-          posted_at: extracted.posted_at ?? null,
-        }
-      : {
-          title: addTitle.trim() || 'Untitled',
-          company: addCompany.trim() || 'Unknown',
-          url: addUrl.trim() || null,
-          location: addLocation.trim() || null,
-          remote: addRemote,
-          description: null,
-          snippet: null,
-          posted_at: null,
-        }
+  const usageText = usage
+    ? `${usage.used}/${usage.limit} requests this month · ${Math.max(0, usage.limit - usage.used)} left`
+    : null
 
   return (
     <div className="jobs-tab">
       <section className="panel jobs-filters-panel">
-        <h2 className="jobs-section-title">Job listings</h2>
-        <p className="jobs-section-hint">
-          Add jobs by URL and paste (extract with AI) or enter manually. Filter and curate your list.
-        </p>
+        <h2 className="jobs-section-title">Filter listings</h2>
+        <p className="jobs-section-hint">Refine what you see below.</p>
         <div className="jobs-filters">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="jobs-filter-select"
-            aria-label="Status"
-          >
-            <option value={STATUS_SAVED}>Saved</option>
-            <option value={STATUS_DISMISSED}>Dismissed</option>
-          </select>
           <input
             type="text"
-            placeholder="Search title, company…"
-            value={filterQ}
-            onChange={(e) => setFilterQ(e.target.value)}
-            className="jobs-filter-input"
-            aria-label="Search"
+            placeholder="Keywords (e.g. AI, developer)"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="jobs-filter-input jobs-discover-q"
+            aria-label="Keywords"
           />
           <input
             type="text"
             placeholder="Location"
-            value={filterLocation}
-            onChange={(e) => setFilterLocation(e.target.value)}
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
             className="jobs-filter-input jobs-filter-location"
             aria-label="Location"
           />
           <label className="jobs-filter-remote">
             <input
               type="checkbox"
-              checked={filterRemote}
-              onChange={(e) => setFilterRemote(e.target.checked)}
+              checked={remoteOnly}
+              onChange={(e) => setRemoteOnly(e.target.checked)}
               aria-label="Remote only"
             />
             Remote only
           </label>
-        </div>
-      </section>
-
-      <section className="panel jobs-add-panel">
-        <h3 className="jobs-add-title">Add job</h3>
-        <div className="jobs-add-tabs">
-          <button
-            type="button"
-            className={`jobs-add-tab ${addMode === 'manual' ? 'active' : ''}`}
-            onClick={() => setAddMode('manual')}
-          >
-            Manual
-          </button>
-          <button
-            type="button"
-            className={`jobs-add-tab ${addMode === 'paste' ? 'active' : ''}`}
-            onClick={() => setAddMode('paste')}
-          >
-            Paste &amp; extract
+          <button type="button" className="primary-button" disabled={loading} onClick={handleSearch}>
+            {loading ? 'Searching…' : 'Search'}
           </button>
         </div>
-        {addMode === 'manual' ? (
-          <div className="jobs-add-form">
-            <input
-              type="text"
-              placeholder="Job title"
-              value={addTitle}
-              onChange={(e) => setAddTitle(e.target.value)}
-              className="jobs-add-input"
-            />
-            <input
-              type="text"
-              placeholder="Company"
-              value={addCompany}
-              onChange={(e) => setAddCompany(e.target.value)}
-              className="jobs-add-input"
-            />
-            <input
-              type="url"
-              placeholder="URL"
-              value={addUrl}
-              onChange={(e) => setAddUrl(e.target.value)}
-              className="jobs-add-input"
-            />
-            <input
-              type="text"
-              placeholder="Location"
-              value={addLocation}
-              onChange={(e) => setAddLocation(e.target.value)}
-              className="jobs-add-input"
-            />
-            <label className="jobs-add-remote">
-              <input type="checkbox" checked={addRemote} onChange={(e) => setAddRemote(e.target.checked)} />
-              Remote
-            </label>
-            <button
-              type="button"
-              className="primary-button jobs-add-save"
-              disabled={saveLoading || (!addTitle.trim() && !addCompany.trim())}
-              onClick={() => handleSaveListing(toSave)}
-            >
-              {saveLoading ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        ) : (
-          <div className="jobs-add-form">
-            <input
-              type="url"
-              placeholder="URL (optional)"
-              value={addUrl}
-              onChange={(e) => setAddUrl(e.target.value)}
-              className="jobs-add-input"
-            />
-            <textarea
-              placeholder="Paste job description here…"
-              value={addPaste}
-              onChange={(e) => setAddPaste(e.target.value)}
-              className="jobs-add-textarea"
-              rows={4}
-            />
-            <div className="jobs-add-paste-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={extractLoading || !addPaste.trim()}
-                onClick={handleExtract}
-              >
-                {extractLoading ? 'Extracting…' : 'Extract with AI'}
-              </button>
-              {extracted && (
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={saveLoading}
-                  onClick={() => handleSaveListing(toSave)}
-                >
-                  {saveLoading ? 'Saving…' : 'Save listing'}
-                </button>
-              )}
-            </div>
-            {extracted && (
-              <div className="jobs-extracted-preview">
-                <strong>{extracted.title || 'Untitled'}</strong> at {extracted.company || '—'}
-                {extracted.location && <span> · {extracted.location}</span>}
-                {extracted.remote && <span className="jobs-remote-badge">Remote</span>}
-                {extracted.snippet && <p className="jobs-snippet">{extracted.snippet}</p>}
-              </div>
-            )}
-          </div>
-        )}
-        {error && <p className="jobs-error">{error}</p>}
+        {usageText && <p className="jobs-usage">{usageText}</p>}
       </section>
 
       <section className="panel jobs-list-panel">
-        <h3 className="jobs-list-title">Your listings</h3>
+        <h2 className="jobs-section-title">Job board</h2>
+        <p className="jobs-section-hint">
+          {hasSearched
+            ? 'Open a link to apply on the source site. Results are cached 24h to save API usage.'
+            : 'Enter keywords and click Search to see listings (one request per search, cached 24h).'}
+        </p>
+        {error && <p className="jobs-error">{error}</p>}
+        {usage && usage.used >= usage.limit && (
+          <p className="jobs-error">Monthly limit reached. Upgrade for more requests.</p>
+        )}
         {loading ? (
           <p className="jobs-loading">Loading…</p>
         ) : listings.length === 0 ? (
-          <p className="jobs-empty">No listings yet. Add one above.</p>
+          <p className="jobs-empty">
+            {hasSearched ? 'No listings. Try different filters or search.' : 'Enter keywords and click Search to see listings.'}
+          </p>
         ) : (
           <ul className="jobs-list">
-            {listings.map((job) => (
-              <li key={job.id} className="jobs-card">
+            {listings.map((job, idx) => (
+              <li key={job.external_id ?? `job-${idx}`} className="jobs-card">
                 <div className="jobs-card-main">
                   <h4 className="jobs-card-title">{job.title || 'Untitled'}</h4>
                   <p className="jobs-card-company">{job.company}</p>
@@ -353,27 +182,15 @@ export default function JobsTab() {
                 </div>
                 <div className="jobs-card-actions">
                   {job.url && (
-                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="secondary-button small">
+                    <a
+                      href={job.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="secondary-button small"
+                    >
                       Open
                     </a>
                   )}
-                  {job.status === STATUS_SAVED && (
-                    <button
-                      type="button"
-                      className="secondary-button small"
-                      onClick={() => handleDismiss(job.id)}
-                    >
-                      Dismiss
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="secondary-button small jobs-delete"
-                    onClick={() => handleDelete(job.id)}
-                    aria-label="Remove"
-                  >
-                    Remove
-                  </button>
                 </div>
               </li>
             ))}

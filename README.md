@@ -24,6 +24,7 @@
 - `OPENAI_API_KEY` — resume parsing and suggestions
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` — Supabase anon key
+- `RAPIDAPI_KEY` — job discovery (JSearch on RapidAPI). You must **subscribe** to the API (free “Basic” plan): open [JSearch](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch), click **Subscribe to Test**, choose **Basic** (200 requests/month). Then add your RapidAPI key to `.env.local` as `RAPIDAPI_KEY`.
 
 ```bash
 npm install

@@ -452,6 +452,53 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- JSearch discover cache (one row per user: last search params + listings; expires_at for cleanup)
+CREATE TABLE IF NOT EXISTS jsearch_cache (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  search_params JSONB NOT NULL DEFAULT '{}',
+  listings JSONB NOT NULL DEFAULT '[]',
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+ALTER TABLE jsearch_cache ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'jsearch_cache_select_own' AND tablename = 'jsearch_cache') THEN
+    CREATE POLICY "jsearch_cache_select_own" ON jsearch_cache FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'jsearch_cache_insert_own' AND tablename = 'jsearch_cache') THEN
+    CREATE POLICY "jsearch_cache_insert_own" ON jsearch_cache FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'jsearch_cache_update_own' AND tablename = 'jsearch_cache') THEN
+    CREATE POLICY "jsearch_cache_update_own" ON jsearch_cache FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'jsearch_cache_delete_own' AND tablename = 'jsearch_cache') THEN
+    CREATE POLICY "jsearch_cache_delete_own" ON jsearch_cache FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- JSearch usage (per user per month; for rate limit and display)
+CREATE TABLE IF NOT EXISTS jsearch_usage (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  month TEXT NOT NULL,
+  request_count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, month)
+);
+
+ALTER TABLE jsearch_usage ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'jsearch_usage_select_own' AND tablename = 'jsearch_usage') THEN
+    CREATE POLICY "jsearch_usage_select_own" ON jsearch_usage FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'jsearch_usage_insert_own' AND tablename = 'jsearch_usage') THEN
+    CREATE POLICY "jsearch_usage_insert_own" ON jsearch_usage FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'jsearch_usage_update_own' AND tablename = 'jsearch_usage') THEN
+    CREATE POLICY "jsearch_usage_update_own" ON jsearch_usage FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
 -- Platform credentials (encrypted passwords stored here)
 CREATE TABLE IF NOT EXISTS platform_credentials (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
