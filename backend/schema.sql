@@ -426,31 +426,30 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Job preferences (one row per user)
-CREATE TABLE IF NOT EXISTS job_preferences (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-  titles TEXT[] DEFAULT '{}',
-  keywords TEXT[] DEFAULT '{}',
-  locations TEXT[] DEFAULT '{}',
-  remote_only BOOLEAN DEFAULT false,
-  max_applications_per_run INTEGER DEFAULT 10,
-  updated_at TIMESTAMPTZ DEFAULT now()
+-- Job qualifications (one row per user; LLM-filled from Data for AI job board)
+CREATE TABLE IF NOT EXISTS job_qualifications (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  search_query TEXT NOT NULL DEFAULT 'jobs',
+  location TEXT,
+  remote BOOLEAN DEFAULT true,
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-ALTER TABLE job_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_qualifications ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_prefs_select_own' AND tablename = 'job_preferences') THEN
-    CREATE POLICY "job_prefs_select_own" ON job_preferences FOR SELECT USING (auth.uid() = user_id);
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_qualifications_select_own' AND tablename = 'job_qualifications') THEN
+    CREATE POLICY "job_qualifications_select_own" ON job_qualifications FOR SELECT USING (auth.uid() = user_id);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_prefs_insert_own' AND tablename = 'job_preferences') THEN
-    CREATE POLICY "job_prefs_insert_own" ON job_preferences FOR INSERT WITH CHECK (auth.uid() = user_id);
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_qualifications_insert_own' AND tablename = 'job_qualifications') THEN
+    CREATE POLICY "job_qualifications_insert_own" ON job_qualifications FOR INSERT WITH CHECK (auth.uid() = user_id);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_prefs_update_own' AND tablename = 'job_preferences') THEN
-    CREATE POLICY "job_prefs_update_own" ON job_preferences FOR UPDATE USING (auth.uid() = user_id);
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_qualifications_update_own' AND tablename = 'job_qualifications') THEN
+    CREATE POLICY "job_qualifications_update_own" ON job_qualifications FOR UPDATE USING (auth.uid() = user_id);
   END IF;
 END $$;
+
+DROP TABLE IF EXISTS job_preferences CASCADE;
 
 -- JSearch discover cache (one row per user: last search params + listings; expires_at for cleanup)
 CREATE TABLE IF NOT EXISTS jsearch_cache (
