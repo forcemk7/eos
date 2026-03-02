@@ -8,8 +8,9 @@ import ResumeUpload from './components/ResumeUpload'
 import ResumeEditor, { ResumeData } from './components/ResumeEditor'
 import DataTab from './components/DataTab'
 import JobsTab from './components/JobsTab'
+import CoverLetterTab from './components/CoverLetterTab'
 
-type Tab = 'data' | 'jobs' | 'resume'
+type Tab = 'data' | 'jobs' | 'resume' | 'cover-letter'
 
 interface ResumeVersion {
   id: string
@@ -113,6 +114,14 @@ export default function Home() {
   }, [])
 
   async function handleSignOut() {
+    try {
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem('earnOS_coverLetter_visited')
+        window.sessionStorage.removeItem('earnOS_coverLetter_lastChatId')
+      }
+    } catch {
+      // ignore
+    }
     const supabase = createClient()
     await supabase.auth.signOut()
     window.location.reload()
@@ -175,6 +184,13 @@ export default function Home() {
           </button>
           <button
             type="button"
+            className={`app-tab${tab === 'cover-letter' ? ' active' : ''}`}
+            onClick={() => setTab('cover-letter')}
+          >
+            Cover letter
+          </button>
+          <button
+            type="button"
             className={`app-tab${tab === 'resume' ? ' active' : ''}`}
             onClick={() => setTab('resume')}
           >
@@ -190,7 +206,7 @@ export default function Home() {
           Sign out
         </button>
       </header>
-      <main className="app-content">
+      <main className={`app-content${tab === 'cover-letter' ? ' app-content-cover-letter' : ''}`}>
         {totalIncomplete > 0 && (
           <div className="dashboard-incomplete-strip" role="status">
             <span className="dashboard-incomplete-text">
@@ -216,6 +232,8 @@ export default function Home() {
           />
         ) : tab === 'jobs' ? (
           <JobsTab />
+        ) : tab === 'cover-letter' ? (
+          <CoverLetterTab />
         ) : tab === 'resume' ? (
           !current ? (
             <ResumeUpload onSuccess={loadResume} />

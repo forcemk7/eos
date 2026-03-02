@@ -384,6 +384,64 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Cover letter chats (one chat per cover letter; title from LLM)
+CREATE TABLE IF NOT EXISTS cover_letter_chats (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cover_letter_chats_user_id ON cover_letter_chats(user_id);
+CREATE INDEX IF NOT EXISTS idx_cover_letter_chats_user_updated ON cover_letter_chats(user_id, updated_at DESC);
+
+ALTER TABLE cover_letter_chats ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'cover_letter_chats_select_own' AND tablename = 'cover_letter_chats') THEN
+    CREATE POLICY "cover_letter_chats_select_own" ON cover_letter_chats FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'cover_letter_chats_insert_own' AND tablename = 'cover_letter_chats') THEN
+    CREATE POLICY "cover_letter_chats_insert_own" ON cover_letter_chats FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'cover_letter_chats_update_own' AND tablename = 'cover_letter_chats') THEN
+    CREATE POLICY "cover_letter_chats_update_own" ON cover_letter_chats FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'cover_letter_chats_delete_own' AND tablename = 'cover_letter_chats') THEN
+    CREATE POLICY "cover_letter_chats_delete_own" ON cover_letter_chats FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+-- Cover letter messages (content: JSONB with parts: [{ type: 'text', text }, { type: 'image', storagePath }])
+CREATE TABLE IF NOT EXISTS cover_letter_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chat_id UUID NOT NULL REFERENCES cover_letter_chats(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content JSONB NOT NULL DEFAULT '{"parts":[]}',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cover_letter_messages_chat_id ON cover_letter_messages(chat_id);
+CREATE INDEX IF NOT EXISTS idx_cover_letter_messages_created ON cover_letter_messages(chat_id, created_at);
+
+ALTER TABLE cover_letter_messages ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'cover_letter_messages_select_via_chat' AND tablename = 'cover_letter_messages') THEN
+    CREATE POLICY "cover_letter_messages_select_via_chat" ON cover_letter_messages FOR SELECT
+      USING (EXISTS (SELECT 1 FROM cover_letter_chats c WHERE c.id = chat_id AND c.user_id = auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'cover_letter_messages_insert_via_chat' AND tablename = 'cover_letter_messages') THEN
+    CREATE POLICY "cover_letter_messages_insert_via_chat" ON cover_letter_messages FOR INSERT
+      WITH CHECK (EXISTS (SELECT 1 FROM cover_letter_chats c WHERE c.id = chat_id AND c.user_id = auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'cover_letter_messages_delete_via_chat' AND tablename = 'cover_letter_messages') THEN
+    CREATE POLICY "cover_letter_messages_delete_via_chat" ON cover_letter_messages FOR DELETE
+      USING (EXISTS (SELECT 1 FROM cover_letter_chats c WHERE c.id = chat_id AND c.user_id = auth.uid()));
+  END IF;
+END $$;
+
 -- Job listings (saved per user; sourced from manual add, aggregator, etc.)
 CREATE TABLE IF NOT EXISTS job_listings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
