@@ -8,9 +8,10 @@ import ResumeUpload from './components/ResumeUpload'
 import ResumeEditor, { ResumeData } from './components/ResumeEditor'
 import DataTab from './components/DataTab'
 import JobsTab from './components/JobsTab'
+import AIJobsTab from './components/AIJobsTab'
 import CoverLetterTab from './components/CoverLetterTab'
 
-type Tab = 'data' | 'jobs' | 'resume' | 'cover-letter'
+type Tab = 'data' | 'jobs' | 'ai-jobs' | 'resume' | 'cover-letter'
 
 interface ResumeVersion {
   id: string
@@ -180,14 +181,21 @@ export default function Home() {
             className={`app-tab${tab === 'jobs' ? ' active' : ''}`}
             onClick={() => setTab('jobs')}
           >
-            Jobs
+            Job Board
+          </button>
+          <button
+            type="button"
+            className={`app-tab${tab === 'ai-jobs' ? ' active' : ''}`}
+            onClick={() => setTab('ai-jobs')}
+          >
+            Recommended Jobs
           </button>
           <button
             type="button"
             className={`app-tab${tab === 'cover-letter' ? ' active' : ''}`}
             onClick={() => setTab('cover-letter')}
           >
-            Cover letter
+            Cover Letter
           </button>
           <button
             type="button"
@@ -232,6 +240,8 @@ export default function Home() {
           />
         ) : tab === 'jobs' ? (
           <JobsTab />
+        ) : tab === 'ai-jobs' ? (
+          <AIJobsTab />
         ) : tab === 'cover-letter' ? (
           <CoverLetterTab />
         ) : tab === 'resume' ? (

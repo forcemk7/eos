@@ -20,8 +20,8 @@ const SYSTEM_PROMPT = `You output JSON only. Given a candidate profile, suggest 
 Output exactly this JSON shape, no other text:
 { "search_query": string, "location": string | null, "remote": boolean }
 
-- search_query: 2–5 word query for a job search API (e.g. "software engineer", "product manager", "data analyst"). Base it on their experience and skills.
-- location: city or region if they have a location and might want local jobs; otherwise null.
+- search_query: Keywords only for the job search API. Use 2–5 words: job title or role (e.g. "software engineer", "product manager", "technical project manager"). No location, no punctuation, no symbols, no "in" or commas. The API will use this string as the sole search query; location and remote are applied separately.
+- location: city or region for display only if they have a location (e.g. "Sandnes, Norway"); otherwise null. Do not put location inside search_query.
 - remote: true if they should see remote jobs (default true when in doubt).`
 
 /** GET: return current job_qualifications for the user. */
