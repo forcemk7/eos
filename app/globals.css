@@ -1,4 +1,49 @@
-/* ── Reset ─────────────────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn semantic tokens (dark theme default) */
+    --background: 222 47% 6%;
+    --foreground: 213 31% 91%;
+    --card: 214 32% 11%;
+    --card-foreground: 213 31% 91%;
+    --popover: 214 32% 11%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 32% 17%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 214 32% 17%;
+    --muted-foreground: 215 20% 45%;
+    --accent: 214 32% 17%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 217 91% 60%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 213 31% 91%;
+    --card: 214 32% 11%;
+    --card-foreground: 213 31% 91%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 214 32% 17%;
+    --muted-foreground: 215 20% 45%;
+    --accent: 214 32% 17%;
+    --accent-foreground: 213 31% 91%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 217 91% 60%;
+  }
+}
+
+/* ── eOS legacy variables (kept for existing components) ─── */
 
 *,
 *::before,
@@ -28,7 +73,8 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
-  background: var(--bg);
+  background: linear-gradient(180deg, var(--bg) 0%, #0f1419 100%);
+  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;

@@ -10,8 +10,9 @@ import DataTab from './components/DataTab'
 import JobsTab from './components/JobsTab'
 import AIJobsTab from './components/AIJobsTab'
 import CoverLetterTab from './components/CoverLetterTab'
-
-type Tab = 'data' | 'jobs' | 'ai-jobs' | 'resume' | 'cover-letter'
+import { AppSidebar, type Tab } from './components/AppSidebar'
+import { AppTopBar } from './components/AppTopBar'
+import { Dashboard } from './components/Dashboard'
 
 interface ResumeVersion {
   id: string
@@ -26,9 +27,15 @@ export default function Home() {
   const [current, setCurrent] = useState<ResumeVersion | null>(null)
   const [versions, setVersions] = useState<ResumeVersion[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<Tab>('data')
+  const [tab, setTab] = useState<Tab>('dashboard')
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [dataIncompleteCount, setDataIncompleteCount] = useState(0)
   const userIdRef = useRef<string | null>(null)
+
+  const handleNavigate = useCallback((t: Tab) => {
+    setTab(t)
+    setSheetOpen(false)
+  }, [])
 
   const resumeIncompleteCount = current ? 0 : 1
   const totalIncomplete = dataIncompleteCount + resumeIncompleteCount
@@ -159,104 +166,70 @@ export default function Home() {
   }
 
   return (
-    <div className="app-shell">
-      <header className="app-header-simple">
-        <span className="app-logo">eOS</span>
-        <span className="app-name">eOS</span>
-        <nav className="app-tabs">
-          <button
-            type="button"
-            className={`app-tab${tab === 'data' ? ' active' : ''}`}
-            onClick={() => setTab('data')}
-          >
-            Data
-            {dataIncompleteCount > 0 && (
-              <span className="app-tab-badge" aria-label={`${dataIncompleteCount} incomplete`}>
-                {dataIncompleteCount}
-              </span>
+    <div className="flex min-h-screen bg-background">
+      <AppSidebar
+        currentTab={tab}
+        onNavigate={handleNavigate}
+        dataIncompleteCount={dataIncompleteCount}
+        resumeIncompleteCount={resumeIncompleteCount}
+        onSignOut={handleSignOut}
+        sheetOpen={sheetOpen}
+        onSheetOpenChange={setSheetOpen}
+      />
+      <div className="flex flex-1 flex-col min-w-0 md:ml-60">
+        <AppTopBar onMenuClick={() => setSheetOpen(true)} />
+        <main className={`flex-1 flex flex-col min-h-0 ${tab === 'cover-letter' ? ' app-content-cover-letter' : ''}`}>
+          <div className={tab === 'cover-letter' ? 'flex-1 flex flex-col min-h-0' : 'flex-1 overflow-y-auto app-content'}>
+            {totalIncomplete > 0 && tab !== 'dashboard' && (
+              <div className="dashboard-incomplete-strip" role="status">
+                <span className="dashboard-incomplete-text">
+                  {totalIncomplete} item{totalIncomplete !== 1 ? 's' : ''} to complete
+                </span>
+                <button
+                  type="button"
+                  className="dashboard-incomplete-view"
+                  onClick={() => setTab(dataIncompleteCount >= resumeIncompleteCount ? 'data' : 'resume')}
+                >
+                  View
+                </button>
+              </div>
             )}
-          </button>
-          <button
-            type="button"
-            className={`app-tab${tab === 'jobs' ? ' active' : ''}`}
-            onClick={() => setTab('jobs')}
-          >
-            Job Board
-          </button>
-          <button
-            type="button"
-            className={`app-tab${tab === 'ai-jobs' ? ' active' : ''}`}
-            onClick={() => setTab('ai-jobs')}
-          >
-            Recommended Jobs
-          </button>
-          <button
-            type="button"
-            className={`app-tab${tab === 'cover-letter' ? ' active' : ''}`}
-            onClick={() => setTab('cover-letter')}
-          >
-            Cover Letter
-          </button>
-          <button
-            type="button"
-            className={`app-tab${tab === 'resume' ? ' active' : ''}`}
-            onClick={() => setTab('resume')}
-          >
-            Resume
-            {resumeIncompleteCount > 0 && (
-              <span className="app-tab-badge" aria-label="1 incomplete">
-                {resumeIncompleteCount}
-              </span>
-            )}
-          </button>
-        </nav>
-        <button type="button" className="secondary-button sign-out" onClick={handleSignOut}>
-          Sign out
-        </button>
-      </header>
-      <main className={`app-content${tab === 'cover-letter' ? ' app-content-cover-letter' : ''}`}>
-        {totalIncomplete > 0 && (
-          <div className="dashboard-incomplete-strip" role="status">
-            <span className="dashboard-incomplete-text">
-              {totalIncomplete} item{totalIncomplete !== 1 ? 's' : ''} to complete
-            </span>
-            <button
-              type="button"
-              className="dashboard-incomplete-view"
-              onClick={() => setTab(dataIncompleteCount >= resumeIncompleteCount ? 'data' : 'resume')}
-            >
-              View
-            </button>
+            {loading ? (
+              <p className="loading-message">Loading…</p>
+            ) : tab === 'dashboard' ? (
+              <Dashboard
+                onNavigate={handleNavigate}
+                totalIncomplete={totalIncomplete}
+                onViewIncomplete={() => setTab(dataIncompleteCount >= resumeIncompleteCount ? 'data' : 'resume')}
+              />
+            ) : tab === 'data' ? (
+              <DataTab
+                initialData={current?.parsed_data ?? null}
+                onSave={(data) => handleSave(data)}
+                onDataChange={loadResume}
+                onCompletenessChange={setDataIncompleteCount}
+              />
+            ) : tab === 'jobs' ? (
+              <JobsTab />
+            ) : tab === 'ai-jobs' ? (
+              <AIJobsTab />
+            ) : tab === 'cover-letter' ? (
+              <CoverLetterTab />
+            ) : tab === 'resume' ? (
+              !current ? (
+                <ResumeUpload onSuccess={loadResume} />
+              ) : (
+                <ResumeEditor
+                  initialData={current.parsed_data || ({} as ResumeData)}
+                  versions={versions}
+                  onSave={(data) => handleSave(data)}
+                  onRestore={handleRestore}
+                />
+              )
+            ) : null}
           </div>
-        )}
-        {loading ? (
-          <p className="loading-message">Loading…</p>
-        ) : tab === 'data' ? (
-          <DataTab
-            initialData={current?.parsed_data ?? null}
-            onSave={(data) => handleSave(data)}
-            onDataChange={loadResume}
-            onCompletenessChange={setDataIncompleteCount}
-          />
-        ) : tab === 'jobs' ? (
-          <JobsTab />
-        ) : tab === 'ai-jobs' ? (
-          <AIJobsTab />
-        ) : tab === 'cover-letter' ? (
-          <CoverLetterTab />
-        ) : tab === 'resume' ? (
-          !current ? (
-            <ResumeUpload onSuccess={loadResume} />
-          ) : (
-            <ResumeEditor
-              initialData={current.parsed_data || ({} as ResumeData)}
-              versions={versions}
-              onSave={(data) => handleSave(data)}
-              onRestore={handleRestore}
-            />
-          )
-        ) : null}
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

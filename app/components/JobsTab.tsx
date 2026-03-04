@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Button } from '@/app/components/ui/button'
 
 const STORAGE_KEY = 'earnOS_jobs_params'
 const DEFAULT_QUERY = 'jobs'
@@ -114,89 +116,98 @@ export default function JobsTab() {
 
   return (
     <div className="jobs-tab">
-      <section className="panel jobs-filters-panel">
-        <h2 className="jobs-section-title">Filter listings</h2>
-        <p className="jobs-section-hint">Refine what you see below.</p>
-        <div className="jobs-filters">
-          <input
-            type="text"
-            placeholder="Keywords (e.g. AI, developer)"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="jobs-filter-input jobs-discover-q"
-            aria-label="Keywords"
-          />
-          <input
-            type="text"
-            placeholder="Location"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className="jobs-filter-input jobs-filter-location"
-            aria-label="Location"
-          />
-          <label className="jobs-filter-remote">
+      <Card className="jobs-filters-panel">
+        <CardHeader>
+          <CardTitle className="jobs-section-title">Filter listings</CardTitle>
+          <CardDescription className="jobs-section-hint">Refine what you see below.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="jobs-filters">
             <input
-              type="checkbox"
-              checked={remoteOnly}
-              onChange={(e) => setRemoteOnly(e.target.checked)}
-              aria-label="Remote only"
+              type="text"
+              placeholder="Keywords (e.g. AI, developer)"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="jobs-filter-input jobs-discover-q"
+              aria-label="Keywords"
             />
-            Remote only
-          </label>
-          <button type="button" className="primary-button" disabled={loading} onClick={handleSearch}>
-            {loading ? 'Searching…' : 'Search'}
-          </button>
-        </div>
-        {usageText && <p className="jobs-usage">{usageText}</p>}
-      </section>
+            <input
+              type="text"
+              placeholder="Location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="jobs-filter-input jobs-filter-location"
+              aria-label="Location"
+            />
+            <label className="jobs-filter-remote">
+              <input
+                type="checkbox"
+                checked={remoteOnly}
+                onChange={(e) => setRemoteOnly(e.target.checked)}
+                aria-label="Remote only"
+              />
+              Remote only
+            </label>
+            <Button disabled={loading} onClick={handleSearch}>
+              {loading ? 'Searching…' : 'Search'}
+            </Button>
+          </div>
+          {usageText && <p className="jobs-usage">{usageText}</p>}
+        </CardContent>
+      </Card>
 
-      <section className="panel jobs-list-panel">
-        <h2 className="jobs-section-title">Job board</h2>
-        <p className="jobs-section-hint">
-          {hasSearched
-            ? 'Open a link to apply on the source site. Results are cached 24h to save API usage.'
-            : 'Enter keywords and click Search to see listings (one request per search, cached 24h).'}
-        </p>
-        {error && <p className="jobs-error">{error}</p>}
-        {usage && usage.used >= usage.limit && (
-          <p className="jobs-error">Monthly limit reached. Upgrade for more requests.</p>
-        )}
-        {loading ? (
-          <p className="jobs-loading">Loading…</p>
-        ) : listings.length === 0 ? (
-          <p className="jobs-empty">
-            {hasSearched ? 'No listings. Try different filters or search.' : 'Enter keywords and click Search to see listings.'}
-          </p>
-        ) : (
-          <ul className="jobs-list">
-            {listings.map((job, idx) => (
-              <li key={job.external_id ?? `job-${idx}`} className="jobs-card">
-                <div className="jobs-card-main">
-                  <h4 className="jobs-card-title">{job.title || 'Untitled'}</h4>
-                  <p className="jobs-card-company">{job.company}</p>
-                  <div className="jobs-card-meta">
-                    {job.location && <span>{job.location}</span>}
-                    {job.remote && <span className="jobs-remote-badge">Remote</span>}
-                  </div>
-                  {job.snippet && <p className="jobs-card-snippet">{job.snippet}</p>}
-                </div>
-                <div className="jobs-card-actions">
-                  {job.url && (
-                    <a
-                      href={job.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="secondary-button small"
-                    >
-                      Open
-                    </a>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <Card className="jobs-list-panel">
+        <CardHeader>
+          <CardTitle className="jobs-section-title">Job board</CardTitle>
+          <CardDescription className="jobs-section-hint">
+            {hasSearched
+              ? 'Open a link to apply on the source site. Results are cached 24h to save API usage.'
+              : 'Enter keywords and click Search to see listings (one request per search, cached 24h).'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && <p className="jobs-error">{error}</p>}
+          {usage && usage.used >= usage.limit && (
+            <p className="jobs-error">Monthly limit reached. Upgrade for more requests.</p>
+          )}
+          {loading ? (
+            <p className="jobs-loading">Loading…</p>
+          ) : listings.length === 0 ? (
+            <p className="jobs-empty">
+              {hasSearched ? 'No listings. Try different filters or search.' : 'Enter keywords and click Search to see listings.'}
+            </p>
+          ) : (
+            <ul className="jobs-list">
+              {listings.map((job, idx) => (
+                <li key={job.external_id ?? `job-${idx}`}>
+                  <Card className="jobs-card">
+                    <CardContent className="pt-4 flex flex-wrap items-start justify-between gap-3">
+                      <div className="jobs-card-main flex-1 min-w-0">
+                        <h4 className="jobs-card-title">{job.title || 'Untitled'}</h4>
+                        <p className="jobs-card-company">{job.company}</p>
+                        <div className="jobs-card-meta">
+                          {job.location && <span>{job.location}</span>}
+                          {job.remote && <span className="jobs-remote-badge">Remote</span>}
+                        </div>
+                        {job.snippet && <p className="jobs-card-snippet">{job.snippet}</p>}
+                      </div>
+                      <div className="jobs-card-actions flex-shrink-0">
+                        {job.url && (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={job.url} target="_blank" rel="noopener noreferrer">
+                              Open
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
