@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { JobFitIndicator } from '@/app/components/JobFitIndicator'
 
 interface JobQualifications {
   search_query: string
@@ -31,6 +32,7 @@ export default function AIJobsTab() {
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiQualifications, setAiQualifications] = useState<JobQualifications | null>(null)
   const [aiGenerating, setAiGenerating] = useState(false)
+  const [checkAllTrigger, setCheckAllTrigger] = useState<number | null>(null)
 
   const aiQualRef = useRef<JobQualifications | null>(null)
 
@@ -145,14 +147,26 @@ export default function AIJobsTab() {
               {aiQualifications.location ? ` · ${aiQualifications.location}` : ''}
               {aiQualifications.remote ? ' · Remote' : ''}
             </span>
-            <button
-              type="button"
-              className="secondary-button small"
-              disabled={aiGenerating || aiLoading}
-              onClick={handleRefreshQualifications}
-            >
-              Refresh qualifications
-            </button>
+            <div className="flex items-center gap-2">
+              {aiListings.length > 0 && (
+                <button
+                  type="button"
+                  className="secondary-button small"
+                  disabled={aiGenerating || aiLoading}
+                  onClick={() => setCheckAllTrigger(Date.now())}
+                >
+                  Check fit for all
+                </button>
+              )}
+              <button
+                type="button"
+                className="secondary-button small"
+                disabled={aiGenerating || aiLoading}
+                onClick={handleRefreshQualifications}
+              >
+                Refresh qualifications
+              </button>
+            </div>
           </div>
         )}
         {aiQualifications && !aiGenerating && aiLoading && (
@@ -174,7 +188,8 @@ export default function AIJobsTab() {
                   </div>
                   {job.snippet && <p className="jobs-card-snippet">{job.snippet}</p>}
                 </div>
-                <div className="jobs-card-actions">
+                <div className="jobs-card-actions flex items-center gap-2">
+                  <JobFitIndicator listing={job} triggerCheck={checkAllTrigger ?? undefined} />
                   {job.url && (
                     <a
                       href={job.url}

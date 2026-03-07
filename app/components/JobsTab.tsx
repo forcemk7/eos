@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
+import { JobFitIndicator } from '@/app/components/JobFitIndicator'
 
 const STORAGE_KEY = 'earnOS_jobs_params'
 const DEFAULT_QUERY = 'jobs'
@@ -64,6 +65,7 @@ export default function JobsTab() {
   const [error, setError] = useState<string | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null)
+  const [checkAllTrigger, setCheckAllTrigger] = useState<number | null>(null)
 
   const search = useCallback(
     async (query: string, loc: string, remote: boolean) => {
@@ -177,21 +179,33 @@ export default function JobsTab() {
               {hasSearched ? 'No listings. Try different filters or search.' : 'Enter keywords and click Search to see listings.'}
             </p>
           ) : (
-            <ul className="jobs-list">
-              {listings.map((job, idx) => (
-                <li key={job.external_id ?? `job-${idx}`}>
-                  <Card className="jobs-card">
-                    <CardContent className="pt-4 flex flex-wrap items-start justify-between gap-3">
-                      <div className="jobs-card-main flex-1 min-w-0">
-                        <h4 className="jobs-card-title">{job.title || 'Untitled'}</h4>
-                        <p className="jobs-card-company">{job.company}</p>
-                        <div className="jobs-card-meta">
-                          {job.location && <span>{job.location}</span>}
-                          {job.remote && <span className="jobs-remote-badge">Remote</span>}
+            <>
+              <div className="flex justify-end mb-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setCheckAllTrigger(Date.now())}
+                >
+                  Check fit for all
+                </Button>
+              </div>
+              <ul className="jobs-list">
+                {listings.map((job, idx) => (
+                  <li key={job.external_id ?? `job-${idx}`}>
+                    <Card className="jobs-card">
+                      <CardContent className="pt-4 flex flex-wrap items-start justify-between gap-3">
+                        <div className="jobs-card-main flex-1 min-w-0">
+                          <h4 className="jobs-card-title">{job.title || 'Untitled'}</h4>
+                          <p className="jobs-card-company">{job.company}</p>
+                          <div className="jobs-card-meta">
+                            {job.location && <span>{job.location}</span>}
+                            {job.remote && <span className="jobs-remote-badge">Remote</span>}
+                          </div>
+                          {job.snippet && <p className="jobs-card-snippet">{job.snippet}</p>}
                         </div>
-                        {job.snippet && <p className="jobs-card-snippet">{job.snippet}</p>}
-                      </div>
-                      <div className="jobs-card-actions flex-shrink-0">
+                        <div className="jobs-card-actions flex-shrink-0 flex items-center gap-2">
+                          <JobFitIndicator listing={job} triggerCheck={checkAllTrigger ?? undefined} />
                         {job.url && (
                           <Button variant="outline" size="sm" asChild>
                             <a href={job.url} target="_blank" rel="noopener noreferrer">
@@ -204,7 +218,8 @@ export default function JobsTab() {
                   </Card>
                 </li>
               ))}
-            </ul>
+              </ul>
+            </>
           )}
         </CardContent>
       </Card>
