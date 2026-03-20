@@ -35,7 +35,7 @@ Open `http://localhost:3000`. Sign up, upload a resume, edit and use suggestions
 ### Supabase
 
 1. **Auth** — Enable Email auth.
-2. **Database** — Run `backend/schema.sql` (only `resumes` and storage are required for the current app).
+2. **Database** — Run `backend/schema.sql` on a fresh project, or apply incremental files under `backend/migrations/` (e.g. `20250320_t6_apply_tracking.sql` for job apply logging + `application_events`). Re-run is safe where marked idempotent.
 3. **Storage** — Bucket `resumes` with policies for authenticated upload/read under `{user_id}/`.
 
 ### Project layout
@@ -51,7 +51,8 @@ app/
     resume/suggest/         — POST get LLM suggestions for current resume
     parse-resume/           — POST file upload and AI parse
 backend/
-  schema.sql                — Supabase schema
+  schema.sql                — Full Supabase schema (source of truth)
+  migrations/               — Incremental SQL (e.g. T6 apply tracking)
 lib/
   exportResumePdf.ts        — PDF export (templates)
   applyResumeSuggestion.ts  — Apply a suggestion to resume data

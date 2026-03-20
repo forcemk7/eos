@@ -262,6 +262,41 @@ html, body {
   line-height: 1.5;
 }
 
+/* ── App shell (shared with job boards) ─────────────────── */
+
+.app-shell {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.app-shell--wide {
+  max-width: min(1200px, 100%);
+}
+
+.app-section-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.app-section-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.app-page-header .app-section-title {
+  margin-bottom: 0;
+}
+
 /* ── Buttons ───────────────────────────────────────────── */
 
 .primary-button {
@@ -543,10 +578,7 @@ textarea::placeholder {
 /* ── Data tab ───────────────────────────────────────────── */
 
 .data-tab {
-  max-width: var(--content-max);
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  /* layout: parent .app-shell */
 }
 
 .data-upload .data-section-title,
@@ -732,16 +764,16 @@ textarea::placeholder {
 /* ── Jobs tab ───────────────────────────────────────────── */
 
 .jobs-tab {
-  max-width: var(--content-max);
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  /* layout: parent .app-shell (JobsShell) */
 }
 
 /* ── Cover letter tab ───────────────────────────────────── */
 
-.cover-letter-tab {
+.cover-letter-tab:not(.cover-letter-chat-layout) {
   max-width: var(--content-max);
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -1667,11 +1699,14 @@ textarea::placeholder {
   overflow: hidden;
 }
 
-.jobs-board-header .jobs-section-title {
+.jobs-board-header .jobs-section-title,
+.jobs-section-title,
+.app-board-header .app-section-title {
   margin: 0 0 6px;
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--text);
+  letter-spacing: -0.01em;
 }
 
 .jobs-board-split {
@@ -1836,7 +1871,8 @@ textarea::placeholder {
   }
 }
 
-.jobs-state-block {
+.jobs-state-block,
+.app-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1848,28 +1884,24 @@ textarea::placeholder {
   background: var(--bg-input);
 }
 
-.jobs-state-block--minimal {
+.jobs-state-block--minimal,
+.app-empty-state--minimal {
   flex-direction: row;
   justify-content: center;
   text-align: left;
   padding: 20px;
 }
 
-.jobs-state-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-}
-
-.jobs-state-title {
+.jobs-state-title,
+.app-state-title {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--text);
 }
 
-.jobs-state-body {
+.jobs-state-body,
+.app-state-body {
   margin: 0;
   max-width: 28rem;
   font-size: 0.9rem;
@@ -1877,12 +1909,21 @@ textarea::placeholder {
   color: var(--text-muted);
 }
 
-.jobs-state-actions {
+.jobs-state-actions,
+.app-state-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
   margin-top: 4px;
+}
+
+.jobs-state-icon,
+.app-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
 }
 
 .data-chunk-edu-row {

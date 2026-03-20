@@ -215,7 +215,7 @@ export default function Home() {
             ) : tab === 'ai-jobs' ? (
               <AIJobsTab />
             ) : tab === 'applications' ? (
-              <ApplicationsTab />
+              <ApplicationsTab onBrowseJobs={() => setTab('jobs')} onBrowseRecommended={() => setTab('ai-jobs')} />
             ) : tab === 'cover-letter' ? (
               <CoverLetterTab />
             ) : tab === 'resume' ? (

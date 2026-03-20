@@ -1,48 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, jsonWithCookies } from '@/lib/supabase/server'
 import { rowToJobListing } from '@/lib/jobs/jobListingRow'
+import type { ApplicationReportMeta } from '@/lib/jobs/applicationReportMeta'
+import { isMissingSchemaObject } from '@/lib/supabase/schemaErrors'
 
 function csvEscape(s: string): string {
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`
   return s
 }
 
-/** GET: listings with any apply activity + recent events (JSON or ?format=csv). */
+/** GET: listings with apply activity or manual logs + recent events (JSON or ?format=csv). */
 export async function GET(req: NextRequest) {
   const { user, response, supabase } = await createServerSupabase(req)
   if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
+  const meta: ApplicationReportMeta = {
+    applyTrackingReady: true,
+    eventsReady: true,
+    suggestDatabaseMigration: false,
+  }
+
   try {
     const { searchParams } = new URL(req.url)
     const format = searchParams.get('format')
 
-    const { data: rows, error: listErr } = await supabase
+    let rows: Record<string, unknown>[] | null = null
+
+    const primary = await supabase
       .from('job_listings')
       .select('*')
       .eq('user_id', user.id)
-      .or('apply_outbound_at.not.is.null,apply_decision.not.is.null')
+      .or('apply_outbound_at.not.is.null,apply_decision.not.is.null,source.eq.manual')
       .order('updated_at', { ascending: false })
       .limit(500)
 
-    if (listErr) {
-      console.error('application-report listings:', listErr)
-      return NextResponse.json({ success: false, error: listErr.message }, { status: 500 })
+    if (primary.error) {
+      if (isMissingSchemaObject(primary.error)) {
+        meta.applyTrackingReady = false
+        meta.suggestDatabaseMigration = true
+        const fallback = await supabase
+          .from('job_listings')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(500)
+        if (fallback.error) {
+          console.error('application-report fallback listings:', fallback.error)
+          return NextResponse.json({ success: false, error: fallback.error.message }, { status: 500 })
+        }
+        rows = (fallback.data ?? []) as Record<string, unknown>[]
+      } else {
+        console.error('application-report listings:', primary.error)
+        return NextResponse.json({ success: false, error: primary.error.message }, { status: 500 })
+      }
+    } else {
+      rows = (primary.data ?? []) as Record<string, unknown>[]
     }
 
-    const listings = (rows ?? []).map((r) => rowToJobListing(r as Record<string, unknown>))
+    const listings = (rows ?? []).map((r) => rowToJobListing(r))
 
-    const { data: events, error: evErr } = await supabase
+    let events: Record<string, unknown>[] = []
+    const evRes = await supabase
       .from('application_events')
       .select('id, job_listing_id, event_type, details, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(2000)
 
-    if (evErr) {
-      console.error('application-report events:', evErr)
-      return NextResponse.json({ success: false, error: evErr.message }, { status: 500 })
+    if (evRes.error) {
+      if (isMissingSchemaObject(evRes.error)) {
+        meta.eventsReady = false
+        meta.suggestDatabaseMigration = true
+      } else {
+        console.error('application-report events:', evRes.error)
+        return NextResponse.json({ success: false, error: evRes.error.message }, { status: 500 })
+      }
+    } else {
+      events = (evRes.data ?? []) as Record<string, unknown>[]
     }
 
     if (format === 'csv') {
@@ -88,7 +124,8 @@ export async function GET(req: NextRequest) {
       {
         success: true,
         listings,
-        events: events ?? [],
+        events,
+        meta,
       },
       response
     )
