@@ -1,11 +1,28 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
-import { JobFitIndicator } from '@/app/components/JobFitIndicator'
+import {
+  JobsShell,
+  JobFilterBar,
+  ResultsToolbar,
+  JobBoardSplit,
+  JobListSkeleton,
+  JobEmptyNoResults,
+  JobErrorState,
+  JobQuotaState,
+  type DiscoverListing,
+  type DiscoverListingWithApply,
+  type FilterChip,
+  type JobSort,
+} from '@/app/components/jobs'
+
+export type { DiscoverListing, DiscoverListingWithApply }
 
 const STORAGE_KEY = 'earnOS_jobs_params'
+const STORAGE_SORT = 'earnOS_jobs_sort'
+const STORAGE_COMPACT = 'earnOS_jobs_compact'
 const DEFAULT_QUERY = 'jobs'
 
 interface StoredParams {
@@ -41,41 +58,85 @@ function saveParams(params: StoredParams) {
   }
 }
 
-/** Discovery result from JSearch (no id/user_id/created_at/updated_at/status). */
-export interface DiscoverListing {
-  external_id: string | null
-  source: string
-  title: string
-  company: string
-  url: string | null
-  location: string | null
-  remote: boolean
-  description: string | null
-  snippet: string | null
-  posted_at: string | null
-  raw: Record<string, unknown>
+function loadSort(): JobSort {
+  if (typeof window === 'undefined') return 'posted'
+  try {
+    const v = localStorage.getItem(STORAGE_SORT)
+    if (v === 'title' || v === 'posted') return v
+  } catch {
+    // ignore
+  }
+  return 'posted'
+}
+
+function loadCompact(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return localStorage.getItem(STORAGE_COMPACT) === '1'
+  } catch {
+    return false
+  }
+}
+
+function dedupeAppend(
+  prev: DiscoverListingWithApply[],
+  more: DiscoverListingWithApply[]
+): DiscoverListingWithApply[] {
+  const seen = new Set<string>()
+  const out: DiscoverListingWithApply[] = []
+  for (const j of prev) {
+    const k = j.stable_external_id
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(j)
+  }
+  for (const j of more) {
+    const k = j.stable_external_id
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(j)
+  }
+  return out
 }
 
 export default function JobsTab() {
   const [q, setQ] = useState('')
   const [location, setLocation] = useState('')
   const [remoteOnly, setRemoteOnly] = useState(true)
-  const [listings, setListings] = useState<DiscoverListing[]>([])
+  const [listings, setListings] = useState<DiscoverListingWithApply[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null)
   const [checkAllTrigger, setCheckAllTrigger] = useState<number | null>(null)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [sort, setSort] = useState<JobSort>('posted')
+  const [compactView, setCompactView] = useState(false)
 
-  const search = useCallback(
-    async (query: string, loc: string, remote: boolean) => {
-      setLoading(true)
-      setError(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  const runDiscover = useCallback(
+    async (opts: {
+      query: string
+      loc: string
+      remote: boolean
+      page: number
+      append: boolean
+    }) => {
+      const { query, loc, remote, page: reqPage, append } = opts
+      if (append) setLoadingMore(true)
+      else {
+        setLoading(true)
+        setError(null)
+      }
       try {
         const params = new URLSearchParams()
         params.set('q', query.trim() || DEFAULT_QUERY)
         if (loc.trim()) params.set('location', loc.trim())
         if (remote) params.set('remote', 'true')
+        params.set('page', String(reqPage))
         const res = await fetch(`/api/jobs/discover?${params.toString()}`, { credentials: 'include' })
         const data = await res.json()
 
@@ -85,144 +146,208 @@ export default function JobsTab() {
           const msg = data.error || 'Failed to load listings'
           throw new Error(msg)
         }
-        setListings(data.listings ?? [])
+        const batch: DiscoverListingWithApply[] = data.listings ?? []
+        setListings((prev) => (append ? dedupeAppend(prev, batch) : batch))
+        setPage(reqPage)
+        setHasMore(batch.length > 0)
+        if (!append) {
+          saveParams({ q: query.trim() || '', location: loc.trim(), remoteOnly: remote })
+        }
         setHasSearched(true)
-        saveParams({ q: query.trim() || '', location: loc.trim(), remoteOnly: remote })
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load')
-        setListings([])
+        if (!append) {
+          setError(e instanceof Error ? e.message : 'Failed to load')
+          setListings([])
+        }
         setHasSearched(true)
       } finally {
-        setLoading(false)
+        if (append) setLoadingMore(false)
+        else setLoading(false)
       }
     },
     []
   )
 
-  // First load: show listings (from cache or one API call) using stored or default params
+  useEffect(() => {
+    setSort(loadSort())
+    setCompactView(loadCompact())
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_SORT, sort)
+    } catch {
+      // ignore
+    }
+  }, [sort])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_COMPACT, compactView ? '1' : '0')
+    } catch {
+      // ignore
+    }
+  }, [compactView])
+
   useEffect(() => {
     const stored = loadParams()
     setQ(stored.q)
     setLocation(stored.location)
     setRemoteOnly(stored.remoteOnly)
-    search(stored.q || DEFAULT_QUERY, stored.location, stored.remoteOnly)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
+    runDiscover({
+      query: stored.q || DEFAULT_QUERY,
+      loc: stored.location,
+      remote: stored.remoteOnly,
+      page: 1,
+      append: false,
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- mount bootstrap
 
   function handleSearch() {
-    search(q, location, remoteOnly)
+    setPage(1)
+    setHasMore(true)
+    runDiscover({ query: q, loc: location, remote: remoteOnly, page: 1, append: false })
+  }
+
+  function handleLoadMore() {
+    if (loadingMore || !hasMore || usage && usage.used >= usage.limit) return
+    runDiscover({ query: q, loc: location, remote: remoteOnly, page: page + 1, append: true })
   }
 
   const usageText = usage
     ? `${usage.used}/${usage.limit} requests this month · ${Math.max(0, usage.limit - usage.used)} left`
     : null
 
-  return (
-    <div className="jobs-tab">
-      <Card className="jobs-filters-panel">
-        <CardHeader>
-          <CardTitle className="jobs-section-title">Filter listings</CardTitle>
-          <CardDescription className="jobs-section-hint">Refine what you see below.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="jobs-filters">
-            <input
-              type="text"
-              placeholder="Keywords (e.g. AI, developer)"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="jobs-filter-input jobs-discover-q"
-              aria-label="Keywords"
-            />
-            <input
-              type="text"
-              placeholder="Location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="jobs-filter-input jobs-filter-location"
-              aria-label="Location"
-            />
-            <label className="jobs-filter-remote">
-              <input
-                type="checkbox"
-                checked={remoteOnly}
-                onChange={(e) => setRemoteOnly(e.target.checked)}
-                aria-label="Remote only"
-              />
-              Remote only
-            </label>
-            <Button disabled={loading} onClick={handleSearch}>
-              {loading ? 'Searching…' : 'Search'}
-            </Button>
-          </div>
-          {usageText && <p className="jobs-usage">{usageText}</p>}
-        </CardContent>
-      </Card>
+  const quotaBlocked = Boolean(usage && usage.used >= usage.limit)
 
-      <Card className="jobs-list-panel">
-        <CardHeader>
+  const patchListing = useCallback(
+    (stable_external_id: string, patch: Partial<DiscoverListingWithApply>) => {
+      setListings((prev) =>
+        prev.map((l) => (l.stable_external_id === stable_external_id ? { ...l, ...patch } : l))
+      )
+    },
+    []
+  )
+
+  const filterChips: FilterChip[] = useMemo(() => {
+    const chips: FilterChip[] = []
+    if (remoteOnly) {
+      chips.push({
+        id: 'remote',
+        label: 'Remote only',
+        onRemove: () => {
+          setRemoteOnly(false)
+          setPage(1)
+          setHasMore(true)
+          runDiscover({ query: q, loc: location, remote: false, page: 1, append: false })
+        },
+      })
+    }
+    if (location.trim()) {
+      const loc = location.trim()
+      chips.push({
+        id: 'location',
+        label: `Location: ${loc}`,
+        onRemove: () => {
+          setLocation('')
+          setPage(1)
+          setHasMore(true)
+          runDiscover({ query: q, loc: '', remote: remoteOnly, page: 1, append: false })
+        },
+      })
+    }
+    return chips
+  }, [remoteOnly, location, q, runDiscover])
+
+  function clearFilters() {
+    setQ('')
+    setLocation('')
+    setRemoteOnly(false)
+    setPage(1)
+    setHasMore(true)
+    runDiscover({ query: DEFAULT_QUERY, loc: '', remote: false, page: 1, append: false })
+  }
+
+  return (
+    <JobsShell>
+      <Card className="jobs-board-surface border-border">
+        <CardHeader className="jobs-board-header">
           <CardTitle className="jobs-section-title">Job board</CardTitle>
           <CardDescription className="jobs-section-hint">
             {hasSearched
-              ? 'Open a link to apply on the source site. Results are cached 24h to save API usage.'
-              : 'Enter keywords and click Search to see listings (one request per search, cached 24h).'}
+              ? 'Apply on the employer site. Results refresh from the API once per search and are cached 24h.'
+              : 'Search roles by keywords and location. One discovery request per search (cached 24h).'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {error && <p className="jobs-error">{error}</p>}
-          {usage && usage.used >= usage.limit && (
-            <p className="jobs-error">Monthly limit reached. Upgrade for more requests.</p>
+        <CardContent className="space-y-4">
+          <JobFilterBar
+            variant="manual"
+            q={q}
+            onQChange={setQ}
+            location={location}
+            onLocationChange={setLocation}
+            remoteOnly={remoteOnly}
+            onRemoteOnlyChange={setRemoteOnly}
+            onSearch={handleSearch}
+            loading={loading}
+            usageText={usageText}
+            searchInputRef={searchInputRef}
+          />
+
+          {quotaBlocked && <JobQuotaState used={usage!.used} limit={usage!.limit} />}
+
+          {error && !quotaBlocked && (
+            <JobErrorState message={error} onRetry={handleSearch} />
           )}
-          {loading ? (
-            <p className="jobs-loading">Loading…</p>
-          ) : listings.length === 0 ? (
-            <p className="jobs-empty">
-              {hasSearched ? 'No listings. Try different filters or search.' : 'Enter keywords and click Search to see listings.'}
-            </p>
-          ) : (
+
+          {!quotaBlocked && !error && (
             <>
-              <div className="flex justify-end mb-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setCheckAllTrigger(Date.now())}
-                >
-                  Check fit for all
-                </Button>
-              </div>
-              <ul className="jobs-list">
-                {listings.map((job, idx) => (
-                  <li key={job.external_id ?? `job-${idx}`}>
-                    <Card className="jobs-card">
-                      <CardContent className="pt-4 flex flex-wrap items-start justify-between gap-3">
-                        <div className="jobs-card-main flex-1 min-w-0">
-                          <h4 className="jobs-card-title">{job.title || 'Untitled'}</h4>
-                          <p className="jobs-card-company">{job.company}</p>
-                          <div className="jobs-card-meta">
-                            {job.location && <span>{job.location}</span>}
-                            {job.remote && <span className="jobs-remote-badge">Remote</span>}
-                          </div>
-                          {job.snippet && <p className="jobs-card-snippet">{job.snippet}</p>}
-                        </div>
-                        <div className="jobs-card-actions flex-shrink-0 flex items-center gap-2">
-                          <JobFitIndicator listing={job} triggerCheck={checkAllTrigger ?? undefined} />
-                        {job.url && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={job.url} target="_blank" rel="noopener noreferrer">
-                              Open
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </li>
-              ))}
-              </ul>
+              <ResultsToolbar
+                count={listings.length}
+                loading={loading}
+                chips={filterChips}
+                sort={sort}
+                onSortChange={setSort}
+                compactView={compactView}
+                onCompactViewChange={setCompactView}
+                onCheckFitAll={() => setCheckAllTrigger(Date.now())}
+                checkFitDisabled={loading || listings.length === 0}
+                showCheckFitAll={listings.length > 0}
+              />
+
+              {loading ? (
+                <JobListSkeleton rows={7} />
+              ) : listings.length === 0 ? (
+                <JobEmptyNoResults
+                  onClearFilters={hasSearched ? clearFilters : undefined}
+                />
+              ) : (
+                <>
+                  <JobBoardSplit
+                    listings={listings}
+                    sort={sort}
+                    compact={compactView}
+                    checkAllTrigger={checkAllTrigger ?? undefined}
+                    onPatchListing={patchListing}
+                  />
+                  {hasMore && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={loadingMore}
+                        onClick={handleLoadMore}
+                      >
+                        {loadingMore ? 'Loading…' : 'Load more'}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
         </CardContent>
       </Card>
-    </div>
+    </JobsShell>
   )
 }

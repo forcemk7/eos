@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { LayoutDashboard, Database, Briefcase, Sparkles, FileText, FileCode, LogOut } from 'lucide-react'
+import { LayoutDashboard, Database, Briefcase, Sparkles, FileText, FileCode, GitBranch, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -11,13 +11,21 @@ import {
   SheetHeader,
 } from '@/app/components/ui/sheet'
 
-export type Tab = 'dashboard' | 'data' | 'jobs' | 'ai-jobs' | 'cover-letter' | 'resume'
+export type Tab =
+  | 'dashboard'
+  | 'data'
+  | 'jobs'
+  | 'ai-jobs'
+  | 'applications'
+  | 'cover-letter'
+  | 'resume'
 
 const NAV_ITEMS: { tab: Tab; label: string; icon: React.ElementType }[] = [
   { tab: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { tab: 'data', label: 'Data', icon: Database },
   { tab: 'jobs', label: 'Job Board', icon: Briefcase },
   { tab: 'ai-jobs', label: 'Recommended Jobs', icon: Sparkles },
+  { tab: 'applications', label: 'Applications', icon: GitBranch },
   { tab: 'cover-letter', label: 'Cover Letter', icon: FileText },
   { tab: 'resume', label: 'Resume', icon: FileCode },
 ]

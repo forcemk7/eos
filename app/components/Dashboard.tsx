@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Database, Briefcase, Sparkles, FileText, FileCode } from 'lucide-react'
+import { Database, Briefcase, Sparkles, FileText, FileCode, GitBranch } from 'lucide-react'
 import type { Tab } from './AppSidebar'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
@@ -49,6 +49,26 @@ export function Dashboard({
           </CardContent>
         </Card>
       )}
+
+      <Card className="border-primary/25 bg-primary/[0.04] shadow-sm">
+        <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex gap-4 min-w-0">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <GitBranch className="h-5 w-5 text-primary" aria-hidden />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <h2 className="text-base font-semibold text-foreground">Application pipeline &amp; log</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Every role you engage with from the job boards is tracked here: apply flow, your decisions, manual
+                pipeline updates, and CSV export—ready for funnel views (Sankey-style) as you add more stages.
+              </p>
+            </div>
+          </div>
+          <Button className="shrink-0 w-full sm:w-auto" onClick={() => onNavigate('applications')}>
+            Open application log
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {FEATURES.map(({ tab, title, description, icon }) => (

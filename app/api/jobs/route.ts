@@ -1,45 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, jsonWithCookies } from '@/lib/supabase/server'
+import { rowToJobListing, type JobListingRow } from '@/lib/jobs/jobListingRow'
 
-export interface JobListingRow {
-  id: string
-  user_id: string
-  external_id: string | null
-  source: string
-  title: string
-  company: string
-  url: string | null
-  location: string | null
-  remote: boolean
-  description: string | null
-  snippet: string | null
-  posted_at: string | null
-  raw: Record<string, unknown>
-  status: string
-  created_at: string
-  updated_at: string
-}
-
-function rowToJson(row: Record<string, unknown>): JobListingRow {
-  return {
-    id: row.id as string,
-    user_id: row.user_id as string,
-    external_id: (row.external_id as string) ?? null,
-    source: (row.source as string) ?? 'manual',
-    title: (row.title as string) ?? '',
-    company: (row.company as string) ?? '',
-    url: (row.url as string) ?? null,
-    location: (row.location as string) ?? null,
-    remote: Boolean(row.remote),
-    description: (row.description as string) ?? null,
-    snippet: (row.snippet as string) ?? null,
-    posted_at: (row.posted_at as string) ?? null,
-    raw: typeof row.raw === 'object' && row.raw !== null ? (row.raw as Record<string, unknown>) : {},
-    status: (row.status as string) ?? 'saved',
-    created_at: row.created_at as string,
-    updated_at: row.updated_at as string,
-  }
-}
+export type { JobListingRow }
 
 /** GET: list job listings for the user. Query: status, keywords (comma), location, remote (true/false). */
 export async function GET(req: NextRequest) {
@@ -76,7 +39,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    const listings = (rows ?? []).map((r) => rowToJson(r as Record<string, unknown>))
+    const listings = (rows ?? []).map((r) => rowToJobListing(r as Record<string, unknown>))
     return jsonWithCookies({ success: true, listings }, response)
   } catch (err: unknown) {
     console.error('Error listing jobs:', err)
@@ -130,7 +93,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    return jsonWithCookies({ success: true, listing: rowToJson(row as Record<string, unknown>) }, response)
+    return jsonWithCookies({ success: true, listing: rowToJobListing(row as Record<string, unknown>) }, response)
   } catch (err: unknown) {
     console.error('Error creating job:', err)
     return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Server error' }, { status: 500 })

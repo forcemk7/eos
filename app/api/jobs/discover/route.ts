@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import type { DiscoverListing } from '@/lib/jobs/discoverListing'
+import { mergeDiscoverApplyState } from '@/lib/jobs/mergeDiscoverApplyState'
+
+export type { DiscoverListing, DiscoverListingWithApply } from '@/lib/jobs/discoverListing'
 
 const DEFAULT_JSEARCH_HOST = 'jsearch.p.rapidapi.com'
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 const DEFAULT_MONTHLY_LIMIT = 200
-
-/** Normalized listing returned by discover (no id, user_id, created_at, updated_at, status). */
-export interface DiscoverListing {
-  external_id: string | null
-  source: string
-  title: string
-  company: string
-  url: string | null
-  location: string | null
-  remote: boolean
-  description: string | null
-  snippet: string | null
-  posted_at: string | null
-  raw: Record<string, unknown>
-}
 
 interface JSearchJob {
   job_id?: string
@@ -71,10 +60,12 @@ function normalizeJob(hit: JSearchJob): DiscoverListing {
 }
 
 function paramsMatch(a: SearchParams, b: Record<string, unknown>): boolean {
+  const bPage = typeof b.page === 'number' ? b.page : parseInt(String(b.page ?? '1'), 10) || 1
   return (
     (a.q || 'jobs') === (b.q ?? 'jobs') &&
     (a.location || '') === (b.location ?? '') &&
-    a.remote === Boolean(b.remote)
+    a.remote === Boolean(b.remote) &&
+    a.page === bPage
   )
 }
 
@@ -107,7 +98,7 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1)
 
     const params: SearchParams = { q, location, remote, page }
-    const paramsForCache = { q, location, remote }
+    const paramsForCache = { q, location, remote, page }
 
     // 1. Get current usage (for all responses)
     const { data: usageRow } = await supabase
@@ -141,7 +132,8 @@ export async function GET(req: NextRequest) {
     if (cacheRow && cacheRow.expires_at) {
       const expiresAt = new Date(cacheRow.expires_at as string).getTime()
       if (expiresAt > Date.now() && paramsMatch(params, (cacheRow.search_params as Record<string, unknown>) ?? {})) {
-        const listings = Array.isArray(cacheRow.listings) ? cacheRow.listings as DiscoverListing[] : []
+        const rawListings = Array.isArray(cacheRow.listings) ? (cacheRow.listings as DiscoverListing[]) : []
+        const listings = await mergeDiscoverApplyState(supabase, user.id, rawListings)
         return NextResponse.json({
           success: true,
           listings,
@@ -204,7 +196,7 @@ export async function GET(req: NextRequest) {
 
     const json = (await res.json()) as { data?: JSearchJob[] }
     const hits = Array.isArray(json.data) ? json.data : []
-    const listings = hits.map(normalizeJob)
+    const freshListings = hits.map(normalizeJob)
 
     const expiresAt = new Date(Date.now() + CACHE_TTL_MS)
 
@@ -222,11 +214,13 @@ export async function GET(req: NextRequest) {
       {
         user_id: user.id,
         search_params: paramsForCache,
-        listings,
+        listings: freshListings,
         expires_at: expiresAt.toISOString(),
       },
       { onConflict: 'user_id' }
     )
+
+    const listings = await mergeDiscoverApplyState(supabase, user.id, freshListings)
 
     return NextResponse.json({
       success: true,

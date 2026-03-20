@@ -1662,6 +1662,229 @@ textarea::placeholder {
   color: var(--danger);
 }
 
+/* Job board (T9) — shell, split layout, chips, skeletons, states */
+.jobs-board-surface {
+  overflow: hidden;
+}
+
+.jobs-board-header .jobs-section-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jobs-board-split {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.jobs-board-split--with-detail {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.jobs-board-split__list {
+  flex: 1;
+  min-width: 0;
+}
+
+.jobs-board-split__detail {
+  width: 100%;
+  max-width: 420px;
+  min-width: min(320px, 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  overflow: hidden;
+  position: sticky;
+  top: 0.75rem;
+  align-self: flex-start;
+  max-height: min(90vh, 880px);
+}
+
+.jobs-filter-bar--manual .jobs-usage {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.jobs-filter-ai-query {
+  color: var(--text);
+}
+
+.jobs-filter-chips {
+  list-style: none;
+}
+
+.jobs-filter-chip,
+.jobs-filter-chip--removable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.jobs-filter-chip--removable {
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.jobs-filter-chip--removable:hover {
+  background: var(--bg-card);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.jobs-filter-chip-remove {
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.jobs-source-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-secondary);
+}
+
+.jobs-source-pill--muted {
+  text-transform: none;
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: normal;
+}
+
+.jobs-toolbar-select {
+  font-family: inherit;
+}
+
+.jobs-list-item {
+  list-style: none;
+}
+
+.jobs-skeleton-row {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jobs-skeleton-line {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-input) 0%,
+    rgba(148, 163, 184, 0.15) 50%,
+    var(--bg-input) 100%
+  );
+  background-size: 200% 100%;
+  animation: jobs-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.jobs-skeleton-line--title {
+  width: 72%;
+  height: 16px;
+}
+
+.jobs-skeleton-line--company {
+  width: 40%;
+}
+
+.jobs-skeleton-line--meta {
+  width: 55%;
+  height: 10px;
+}
+
+.jobs-skeleton-line--snippet {
+  width: 100%;
+  height: 10px;
+}
+
+@keyframes jobs-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jobs-skeleton-line {
+    animation: none;
+    background: var(--bg-input);
+  }
+}
+
+.jobs-state-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 32px 20px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+}
+
+.jobs-state-block--minimal {
+  flex-direction: row;
+  justify-content: center;
+  text-align: left;
+  padding: 20px;
+}
+
+.jobs-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.jobs-state-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jobs-state-body {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.jobs-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
 .data-chunk-edu-row {
   display: grid;
   grid-template-columns: 1fr 1fr minmax(100px, 0.8fr) 100px auto;

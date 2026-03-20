@@ -9,6 +9,7 @@ import ResumeEditor, { ResumeData } from './components/ResumeEditor'
 import DataTab from './components/DataTab'
 import JobsTab from './components/JobsTab'
 import AIJobsTab from './components/AIJobsTab'
+import ApplicationsTab from './components/ApplicationsTab'
 import CoverLetterTab from './components/CoverLetterTab'
 import { AppSidebar, type Tab } from './components/AppSidebar'
 import { AppTopBar } from './components/AppTopBar'
@@ -213,6 +214,8 @@ export default function Home() {
               <JobsTab />
             ) : tab === 'ai-jobs' ? (
               <AIJobsTab />
+            ) : tab === 'applications' ? (
+              <ApplicationsTab />
             ) : tab === 'cover-letter' ? (
               <CoverLetterTab />
             ) : tab === 'resume' ? (

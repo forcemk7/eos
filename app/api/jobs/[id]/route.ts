@@ -1,26 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, jsonWithCookies } from '@/lib/supabase/server'
-
-function rowToJson(row: Record<string, unknown>) {
-  return {
-    id: row.id as string,
-    user_id: row.user_id as string,
-    external_id: (row.external_id as string) ?? null,
-    source: (row.source as string) ?? 'manual',
-    title: (row.title as string) ?? '',
-    company: (row.company as string) ?? '',
-    url: (row.url as string) ?? null,
-    location: (row.location as string) ?? null,
-    remote: Boolean(row.remote),
-    description: (row.description as string) ?? null,
-    snippet: (row.snippet as string) ?? null,
-    posted_at: (row.posted_at as string) ?? null,
-    raw: typeof row.raw === 'object' && row.raw !== null ? (row.raw as Record<string, unknown>) : {},
-    status: (row.status as string) ?? 'saved',
-    created_at: row.created_at as string,
-    updated_at: row.updated_at as string,
-  }
-}
+import { rowToJobListing } from '@/lib/jobs/jobListingRow'
 
 export async function GET(
   req: NextRequest,
@@ -44,7 +24,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 })
     }
 
-    return jsonWithCookies({ success: true, listing: rowToJson(row as Record<string, unknown>) }, response)
+    return jsonWithCookies({ success: true, listing: rowToJobListing(row as Record<string, unknown>) }, response)
   } catch (err: unknown) {
     console.error('Error fetching job:', err)
     return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Server error' }, { status: 500 })
@@ -92,7 +72,7 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 })
     }
 
-    return jsonWithCookies({ success: true, listing: rowToJson(row as Record<string, unknown>) }, response)
+    return jsonWithCookies({ success: true, listing: rowToJobListing(row as Record<string, unknown>) }, response)
   } catch (err: unknown) {
     console.error('Error updating job:', err)
     return NextResponse.json({ success: false, error: err instanceof Error ? err.message : 'Server error' }, { status: 500 })
