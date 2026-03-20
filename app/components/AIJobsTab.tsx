@@ -17,6 +17,7 @@ import {
   type FilterChip,
   type JobSort,
 } from '@/app/components/jobs'
+import type { JobSearchAnchor } from '@/lib/jobs/jobSearchAnchor'
 
 export type { DiscoverListing, DiscoverListingWithApply }
 
@@ -72,7 +73,11 @@ function dedupeAppend(
   return out
 }
 
-export default function AIJobsTab() {
+interface AIJobsTabProps {
+  onOpenDataTab?: () => void
+}
+
+export default function AIJobsTab({ onOpenDataTab }: AIJobsTabProps) {
   const [aiListings, setAiListings] = useState<DiscoverListingWithApply[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -84,6 +89,7 @@ export default function AIJobsTab() {
   const [hasMore, setHasMore] = useState(true)
   const [sort, setSort] = useState<JobSort>('posted')
   const [compactView, setCompactView] = useState(false)
+  const [jobSearchAnchor, setJobSearchAnchor] = useState<JobSearchAnchor | null>(null)
 
   const aiQualRef = useRef<JobQualifications | null>(null)
 
@@ -97,6 +103,8 @@ export default function AIJobsTab() {
       try {
         const params = new URLSearchParams()
         params.set('q', qual.search_query.trim() || DEFAULT_QUERY)
+        const loc = qual.location?.trim()
+        if (loc) params.set('location', loc)
         if (qual.remote) params.set('remote', 'true')
         params.set('page', String(reqPage))
         const res = await fetch(`/api/jobs/discover?${params.toString()}`, { credentials: 'include' })
@@ -149,6 +157,7 @@ export default function AIJobsTab() {
       if (getData.success && getData.qualifications) {
         setAiQualifications(getData.qualifications)
         aiQualRef.current = getData.qualifications
+        setJobSearchAnchor(getData.anchor ?? null)
       } else {
         setAiGenerating(true)
         try {
@@ -165,6 +174,7 @@ export default function AIJobsTab() {
           if (postData.qualifications) {
             setAiQualifications(postData.qualifications)
             aiQualRef.current = postData.qualifications
+            setJobSearchAnchor(postData.anchor ?? null)
           }
         } finally {
           if (!cancelled) setAiGenerating(false)
@@ -196,6 +206,7 @@ export default function AIJobsTab() {
       if (data.qualifications) {
         setAiQualifications(data.qualifications)
         aiQualRef.current = data.qualifications
+        setJobSearchAnchor(data.anchor ?? null)
         setPage(1)
         setHasMore(true)
         await fetchListings(data.qualifications, 1, false)
@@ -216,8 +227,13 @@ export default function AIJobsTab() {
     const chips: FilterChip[] = []
     if (aiQualifications.remote) chips.push({ id: 'chip-remote', label: 'Remote' })
     if (aiQualifications.location) chips.push({ id: 'chip-loc', label: aiQualifications.location })
+    if (jobSearchAnchor?.sectors?.length) {
+      jobSearchAnchor.sectors.slice(0, 6).forEach((s, i) => {
+        chips.push({ id: `chip-sector-${i}`, label: s })
+      })
+    }
     return chips
-  }, [aiQualifications])
+  }, [aiQualifications, jobSearchAnchor])
 
   const showBoard = aiQualifications && !aiGenerating
 
@@ -282,6 +298,7 @@ export default function AIJobsTab() {
                     compact={compactView}
                     checkAllTrigger={checkAllTrigger ?? undefined}
                     onPatchListing={patchListing}
+                    onOpenDataTab={onOpenDataTab}
                   />
                   {hasMore && (
                     <div className="flex justify-center pt-2">

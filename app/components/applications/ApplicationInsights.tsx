@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { TrendingDown, Send, CheckCircle2, Clock, Link2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { JobListingRow } from '@/lib/jobs/jobListingRow'
+import { ApplicationPipelineChart } from '@/app/components/applications/ApplicationPipelineChart'
 
 export type FunnelStats = {
   total: number
@@ -48,10 +49,14 @@ const statConfig = [
 export function ApplicationInsights({
   listings,
   pipelineNotesCount,
+  selectedStage = null,
+  onStageSelect = () => {},
   className,
 }: {
   listings: JobListingRow[]
   pipelineNotesCount: number
+  selectedStage?: string | null
+  onStageSelect?: (stageKey: string) => void
   className?: string
 }) {
   const stats = useMemo(() => computeFunnelStats(listings), [listings])
@@ -105,9 +110,21 @@ export function ApplicationInsights({
       </div>
 
       <div className="rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-foreground">Pipeline flow</h3>
+          <span className="text-xs text-muted-foreground">Sankey diagram · click a stage to filter roles</span>
+        </div>
+        <ApplicationPipelineChart
+          listings={listings}
+          selectedStage={selectedStage}
+          onStageSelect={onStageSelect}
+        />
+      </div>
+
+      <div className="rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Outcome mix</h3>
-          <span className="text-xs text-muted-foreground">Sankey-style view (by count)</span>
+          <h3 className="text-sm font-semibold text-foreground">Apply decision mix</h3>
+          <span className="text-xs text-muted-foreground">Share of tracked roles (by count)</span>
         </div>
         <div
           className="flex h-4 overflow-hidden rounded-full bg-muted/50 ring-1 ring-border/50"

@@ -7,10 +7,17 @@ import type { DiscoverListing } from './types'
 interface LazyJobFitIndicatorProps {
   listing: DiscoverListing
   triggerCheck?: number
+  onOpenDataTab?: () => void
+  onTailorToJob?: () => void
 }
 
 /** Defers mounting JobFitIndicator until the row is near the viewport (performance). */
-export function LazyJobFitIndicator({ listing, triggerCheck }: LazyJobFitIndicatorProps) {
+export function LazyJobFitIndicator({
+  listing,
+  triggerCheck,
+  onOpenDataTab,
+  onTailorToJob,
+}: LazyJobFitIndicatorProps) {
   const [visible, setVisible] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -34,7 +41,12 @@ export function LazyJobFitIndicator({ listing, triggerCheck }: LazyJobFitIndicat
   return (
     <div ref={ref} className="inline-flex h-9 w-9 shrink-0 items-center justify-center">
       {visible ? (
-        <JobFitIndicator listing={listing} triggerCheck={triggerCheck} />
+        <JobFitIndicator
+          listing={listing}
+          triggerCheck={triggerCheck}
+          onOpenDataTab={onOpenDataTab}
+          onTailorToJob={onTailorToJob}
+        />
       ) : (
         <span className="sr-only">Fit score loads when this row is visible</span>
       )}

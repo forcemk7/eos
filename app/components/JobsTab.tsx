@@ -99,7 +99,11 @@ function dedupeAppend(
   return out
 }
 
-export default function JobsTab() {
+interface JobsTabProps {
+  onOpenDataTab?: () => void
+}
+
+export default function JobsTab({ onOpenDataTab }: JobsTabProps) {
   const [q, setQ] = useState('')
   const [location, setLocation] = useState('')
   const [remoteOnly, setRemoteOnly] = useState(true)
@@ -329,6 +333,7 @@ export default function JobsTab() {
                     compact={compactView}
                     checkAllTrigger={checkAllTrigger ?? undefined}
                     onPatchListing={patchListing}
+                    onOpenDataTab={onOpenDataTab}
                   />
                   {hasMore && (
                     <div className="flex justify-center pt-2">

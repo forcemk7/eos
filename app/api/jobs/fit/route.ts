@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { assembleProfile } from '@/lib/profileDb'
 import { buildProfileSummaryForLLM } from '@/lib/profileSummaryForLLM'
+import { normalizeJobFitPayload } from '@/lib/jobsFit'
 
 const LISTING_MAX_LEN = 15_000
 
@@ -20,14 +21,33 @@ interface FitListingBody {
   remote?: boolean
 }
 
-const SYSTEM_PROMPT = `You compare a job listing to a candidate profile and estimate how well the candidate fits the role. This is a light ATS-style fit indicator, not a guarantee.
+const SYSTEM_PROMPT = `You compare a job listing to a candidate profile and estimate how well the candidate fits the role. This is a rough, profile-based estimate—not a guarantee of how any employer or ATS will score them. Recruiting stacks and tools vary widely; many systems use keyword filters, structured resume fields, and human review.
 
 Output only valid JSON, no other text. Use exactly this shape:
-{ "score": number, "label": string, "feedback": string }
+{
+  "score": number,
+  "label": string,
+  "summary": string,
+  "feedback": string,
+  "screening_likelihood": string,
+  "factors": array,
+  "data_actions": array,
+  "jd_phrases": array
+}
 
-- score: number from 0 to 100. How well the candidate's experience, skills, and background match the job requirements. Be realistic: 0–30 poor fit, 31–50 okay/stretch, 51–75 good fit, 76–100 strong fit.
-- label: exactly one of "bad", "okay", "good", "great". bad = poor fit (score ~0–30), okay = stretch/possible (31–50), good = solid match (51–75), great = strong match (76–100).
-- feedback: 1–3 sentences in plain language explaining why this score: what matches well, what’s missing or is a stretch, and any concrete suggestion. Be specific to the listing and the candidate (e.g. "Your 5 years in X align with the role’s requirement; the posting asks for Y which isn’t on your profile."). No bullet points or markdown.`
+- score: 0–100. Realistic bands: 0–30 poor fit, 31–50 stretch/possible, 51–75 solid, 76–100 strong.
+- label: exactly one of "bad", "okay", "good", "great" matching the score bands above.
+- summary: 1–2 sentences: overall fit in plain language, grounded in the profile and posting.
+- feedback: same substance as summary (duplicate is fine); kept for older clients.
+- screening_likelihood: exactly one of "qualified", "borderline", "unlikely". This is your estimate of how the candidate might fare in typical first-pass screening given only this profile and posting—not a prediction of hire. Align with score: higher scores → qualified, mid → borderline, low → unlikely.
+- factors: up to 8 objects, each { "category", "sentiment", "detail" }:
+  - category: one of "experience_overlap", "keywords", "seniority_tenure", "education", "location_remote", "other"
+  - sentiment: one of "strength", "gap", "neutral"
+  - detail: one sentence tying something concrete on the candidate profile to something emphasized (or missing) relative to the posting. Do not invent profile facts. Mention location or work authorization only if the posting or profile clearly raises it; otherwise omit those angles.
+- data_actions: 2–5 short imperative suggestions for improving the stored profile or resume text (Data tab), each grounded in a gap you identified.
+- jd_phrases: 0–3 short snippets or close paraphrases from the listing body when citing a requirement (empty array if none are clear).
+
+Avoid false precision, vendor-specific ATS claims, and bullet characters in string values. No markdown in JSON strings.`
 
 function buildListingText(listing: FitListingBody): string {
   const parts: string[] = []
@@ -105,23 +125,9 @@ export async function POST(req: NextRequest) {
     }
 
     const parsed = JSON.parse(raw) as Record<string, unknown>
-    let score = typeof parsed.score === 'number' ? Math.round(Math.max(0, Math.min(100, parsed.score))) : 50
-    let label = typeof parsed.label === 'string' ? parsed.label.toLowerCase() : 'okay'
-    const allowed = ['bad', 'okay', 'good', 'great']
-    if (!allowed.includes(label)) {
-      if (score <= 30) label = 'bad'
-      else if (score <= 50) label = 'okay'
-      else if (score <= 75) label = 'good'
-      else label = 'great'
-    }
-    const feedback =
-      typeof parsed.feedback === 'string' && parsed.feedback.trim()
-        ? parsed.feedback.trim()
-        : typeof (parsed as { brief_reason?: string }).brief_reason === 'string'
-          ? (parsed as { brief_reason: string }).brief_reason.trim()
-          : null
+    const normalized = normalizeJobFitPayload(parsed)
 
-    return NextResponse.json({ success: true, score, label, feedback: feedback ?? null })
+    return NextResponse.json(normalized)
   } catch (err: unknown) {
     console.error('Job fit error:', err)
     return NextResponse.json(

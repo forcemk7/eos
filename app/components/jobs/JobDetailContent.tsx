@@ -15,9 +15,17 @@ interface JobDetailContentProps {
   onClose: () => void
   checkAllTrigger?: number
   onPatchListing: (stable_external_id: string, patch: Partial<DiscoverListingWithApply>) => void
+  onOpenDataTab?: () => void
 }
 
-export function JobDetailContent({ job, layout, onClose, checkAllTrigger, onPatchListing }: JobDetailContentProps) {
+export function JobDetailContent({
+  job,
+  layout,
+  onClose,
+  checkAllTrigger,
+  onPatchListing,
+  onOpenDataTab,
+}: JobDetailContentProps) {
   const title = job.title || 'Untitled'
   const posted = formatPostedRelative(job.posted_at)
   const source = formatSourceLabel(job.source)
@@ -90,7 +98,7 @@ export function JobDetailContent({ job, layout, onClose, checkAllTrigger, onPatc
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <div className="mb-6 flex items-center gap-3">
           <span className="text-sm font-medium text-muted-foreground">Fit</span>
-          <JobFitIndicator listing={job} triggerCheck={checkAllTrigger} />
+          <JobFitIndicator listing={job} triggerCheck={checkAllTrigger} onOpenDataTab={onOpenDataTab} />
         </div>
         <section aria-label="Job description">
           <h3 className="mb-2 text-sm font-semibold text-foreground">About this role</h3>

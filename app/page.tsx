@@ -202,6 +202,7 @@ export default function Home() {
               </AppShell>
             ) : tab === 'dashboard' ? (
               <Dashboard
+                user={user}
                 onNavigate={handleNavigate}
                 totalIncomplete={totalIncomplete}
                 onViewIncomplete={() => setTab(dataIncompleteCount >= resumeIncompleteCount ? 'data' : 'resume')}
@@ -214,9 +215,9 @@ export default function Home() {
                 onCompletenessChange={setDataIncompleteCount}
               />
             ) : tab === 'jobs' ? (
-              <JobsTab />
+              <JobsTab onOpenDataTab={() => handleNavigate('data')} />
             ) : tab === 'ai-jobs' ? (
-              <AIJobsTab />
+              <AIJobsTab onOpenDataTab={() => handleNavigate('data')} />
             ) : tab === 'applications' ? (
               <ApplicationsTab onBrowseJobs={() => setTab('jobs')} onBrowseRecommended={() => setTab('ai-jobs')} />
             ) : tab === 'cover-letter' ? (

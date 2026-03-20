@@ -16,6 +16,7 @@ interface JobBoardSplitProps {
   compact: boolean
   checkAllTrigger?: number
   onPatchListing: (stable_external_id: string, patch: Partial<DiscoverListingWithApply>) => void
+  onOpenDataTab?: () => void
 }
 
 export function JobBoardSplit({
@@ -24,6 +25,7 @@ export function JobBoardSplit({
   compact,
   checkAllTrigger,
   onPatchListing,
+  onOpenDataTab,
 }: JobBoardSplitProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const [selected, setSelected] = useState<DiscoverListingWithApply | null>(null)
@@ -56,6 +58,7 @@ export function JobBoardSplit({
               checkAllTrigger={checkAllTrigger}
               compact={compact}
               onPatchListing={onPatchListing}
+              onOpenDataTab={onOpenDataTab}
             />
           ))}
         </ul>
@@ -83,6 +86,7 @@ export function JobBoardSplit({
               onClose={() => setSelected(null)}
               checkAllTrigger={checkAllTrigger}
               onPatchListing={onPatchListing}
+              onOpenDataTab={onOpenDataTab}
             />
           )}
         </SheetContent>
