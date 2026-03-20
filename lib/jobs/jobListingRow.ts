@@ -20,6 +20,7 @@ export interface JobListingRow {
   apply_decision_at: string | null
   apply_notes: string | null
   apply_remind_at: string | null
+  pipeline_stage: string | null
 }
 
 export function rowToJobListing(row: Record<string, unknown>): JobListingRow {
@@ -45,5 +46,6 @@ export function rowToJobListing(row: Record<string, unknown>): JobListingRow {
     apply_decision_at: (row.apply_decision_at as string) ?? null,
     apply_notes: (row.apply_notes as string) ?? null,
     apply_remind_at: (row.apply_remind_at as string) ?? null,
+    pipeline_stage: (row.pipeline_stage as string) ?? null,
   }
 }

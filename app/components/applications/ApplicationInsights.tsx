@@ -1,10 +1,19 @@
 'use client'
 
 import { useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { TrendingDown, Send, CheckCircle2, Clock, Link2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { JobListingRow } from '@/lib/jobs/jobListingRow'
-import { ApplicationPipelineChart } from '@/app/components/applications/ApplicationPipelineChart'
+
+const ApplicationPipelineChart = dynamic(
+  () =>
+    import('@/app/components/applications/ApplicationPipelineChart').then((m) => m.ApplicationPipelineChart),
+  {
+    ssr: false,
+    loading: () => <p className="text-sm text-muted-foreground">Loading pipeline chart…</p>,
+  }
+)
 
 export type FunnelStats = {
   total: number

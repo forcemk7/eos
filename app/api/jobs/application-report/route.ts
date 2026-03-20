@@ -93,6 +93,7 @@ export async function GET(req: NextRequest) {
         'apply_decision_at',
         'apply_notes',
         'apply_remind_at',
+        'pipeline_stage',
       ]
       const lines = [
         header.join(','),
@@ -108,6 +109,7 @@ export async function GET(req: NextRequest) {
             L.apply_decision_at ?? '',
             L.apply_notes ?? '',
             L.apply_remind_at ?? '',
+            L.pipeline_stage ?? '',
           ]
             .map((c) => csvEscape(String(c)))
             .join(',')

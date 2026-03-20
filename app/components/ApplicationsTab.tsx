@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   BookOpen,
   CircleDot,
+  X,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { AppShell, AppLoadingBlock } from '@/app/components/shell'
@@ -17,6 +18,18 @@ import type { JobListingRow } from '@/lib/jobs/jobListingRow'
 import type { ApplicationReportMeta } from '@/lib/jobs/applicationReportMeta'
 import { ApplicationInsights } from '@/app/components/applications/ApplicationInsights'
 import { ManualApplicationSheet } from '@/app/components/applications/ManualApplicationSheet'
+import {
+  listingMatchesSankeyFilter,
+  SANKEY_FILTER_ALL_APPLIED,
+  SANKEY_FILTER_IN_PROCESS_HUB,
+} from '@/lib/jobs/sankeyPipeline'
+import {
+  isCustomPipelineStageId,
+  PIPELINE_CUSTOM_PREFIX,
+  PIPELINE_POST_APPLY_STAGES,
+  pipelineStageLabel,
+  preApplyStageLabel,
+} from '@/lib/jobs/pipelineTaxonomy'
 import { cn } from '@/lib/utils'
 
 interface ApplicationEventRow {
@@ -62,6 +75,11 @@ function eventLabel(type: string, details: Record<string, unknown>): string {
     }
     case 'pipeline_note':
       return typeof details.note === 'string' ? details.note : 'Pipeline update'
+    case 'pipeline_stage_change': {
+      const s = details.stage
+      if (s == null || s === '') return 'Pipeline stage cleared'
+      return `Stage → ${pipelineStageLabel(String(s))}`
+    }
     default:
       return type.replace(/_/g, ' ')
   }
@@ -77,6 +95,8 @@ function eventDotClass(type: string): string {
       return 'bg-violet-500 shadow-[0_0_0_3px_rgba(139,92,246,0.2)]'
     case 'pipeline_note':
       return 'bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.2)]'
+    case 'pipeline_stage_change':
+      return 'bg-teal-500 shadow-[0_0_0_3px_rgba(20,184,166,0.25)]'
     default:
       return 'bg-muted-foreground/80'
   }
@@ -122,6 +142,105 @@ function decisionBadge(listing: JobListingRow) {
 function companyInitial(name: string) {
   const t = name.trim()
   return t ? t.charAt(0).toUpperCase() : '?'
+}
+
+function stageFilterLabel(id: string): string {
+  if (id === SANKEY_FILTER_ALL_APPLIED) return 'All applied'
+  if (id === SANKEY_FILTER_IN_PROCESS_HUB) return 'In progress'
+  if (id.startsWith('pre_')) return preApplyStageLabel(id)
+  return pipelineStageLabel(id)
+}
+
+function PipelineStageControl({
+  listing,
+  onSaved,
+}: {
+  listing: JobListingRow
+  onSaved: () => void
+}) {
+  const raw = listing.pipeline_stage?.trim() ?? ''
+  const isCustom = isCustomPipelineStageId(raw)
+  const [customDraft, setCustomDraft] = useState(() =>
+    isCustom ? raw.slice(PIPELINE_CUSTOM_PREFIX.length) : ''
+  )
+  const [savingStage, setSavingStage] = useState(false)
+
+  useEffect(() => {
+    if (isCustomPipelineStageId(raw)) setCustomDraft(raw.slice(PIPELINE_CUSTOM_PREFIX.length))
+    else setCustomDraft('')
+  }, [raw, listing.id])
+
+  async function postStage(stage: string | null) {
+    setSavingStage(true)
+    try {
+      const res = await fetch(`/api/jobs/${listing.id}/apply-event`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'pipeline_stage_set', stage: stage === null ? '' : stage }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to update stage')
+      onSaved()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to update stage')
+    } finally {
+      setSavingStage(false)
+    }
+  }
+
+  const selectable = PIPELINE_POST_APPLY_STAGES.filter((s) => s.selectable)
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/10 px-3 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pipeline stage</p>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <label htmlFor={`pipeline-stage-${listing.id}`} className="sr-only">
+          Pipeline stage
+        </label>
+        <select
+          id={`pipeline-stage-${listing.id}`}
+          className="w-full min-w-[12rem] max-w-md rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
+          value={isCustom ? '__current_custom__' : raw || ''}
+          disabled={savingStage}
+          onChange={(e) => {
+            const v = e.target.value
+            if (v === '__current_custom__') return
+            void postStage(v === '' ? null : v)
+          }}
+        >
+          {isCustom && (
+            <option value="__current_custom__">{pipelineStageLabel(raw)}</option>
+          )}
+          <option value="">Not set</option>
+          {selectable.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={customDraft}
+            onChange={(e) => setCustomDraft(e.target.value)}
+            placeholder="Custom label (e.g. HireVue)"
+            className="min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Custom pipeline stage label"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={savingStage || !customDraft.trim()}
+            onClick={() => void postStage(`${PIPELINE_CUSTOM_PREFIX}${customDraft.trim()}`)}
+          >
+            Save custom
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function ListingPipelineCard({
@@ -205,6 +324,8 @@ function ListingPipelineCard({
                 <ExternalLink className="h-3.5 w-3.5 opacity-80" aria-hidden />
               </a>
             )}
+
+            {listing.apply_decision === 'applied' && <PipelineStageControl listing={listing} onSaved={onNoteAdded} />}
 
             <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resume / materials</p>
@@ -309,6 +430,7 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
   const [meta, setMeta] = useState<ApplicationReportMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [filterStageId, setFilterStageId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -357,6 +479,15 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
   )
 
   const eventsReady = meta?.eventsReady !== false
+
+  const filteredListings = useMemo(
+    () => listings.filter((L) => listingMatchesSankeyFilter(L, filterStageId)),
+    [listings, filterStageId]
+  )
+
+  const handleStageSelect = useCallback((stageKey: string) => {
+    setFilterStageId((prev) => (prev === stageKey ? null : stageKey))
+  }, [])
 
   async function downloadCsv() {
     try {
@@ -432,7 +563,12 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
           {loading && <AppLoadingBlock message="Loading your pipeline…" />}
 
           {!loading && !error && listings.length > 0 && (
-            <ApplicationInsights listings={listings} pipelineNotesCount={pipelineNotesCount} />
+            <ApplicationInsights
+              listings={listings}
+              pipelineNotesCount={pipelineNotesCount}
+              selectedStage={filterStageId}
+              onStageSelect={handleStageSelect}
+            />
           )}
 
           {showEmpty && (
@@ -488,18 +624,41 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
 
           {!loading && !error && listings.length > 0 && (
             <section aria-label="Application list">
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Roles</h2>
-              <ul className="space-y-5">
-                {listings.map((listing) => (
-                  <ListingPipelineCard
-                    key={listing.id}
-                    listing={listing}
-                    events={eventsByListing.get(listing.id) ?? []}
-                    onNoteAdded={load}
-                    eventsReady={eventsReady}
-                  />
-                ))}
-              </ul>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Roles</h2>
+                {filterStageId != null && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setFilterStageId(null)}
+                  >
+                    <span className="max-w-[220px] truncate text-left">
+                      Filter: {stageFilterLabel(filterStageId)}
+                    </span>
+                    <X className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                    <span className="sr-only">Clear filter</span>
+                  </Button>
+                )}
+              </div>
+              {filteredListings.length === 0 ? (
+                <p className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+                  No roles in this stage. Clear the filter or pick another segment on the chart.
+                </p>
+              ) : (
+                <ul className="space-y-5">
+                  {filteredListings.map((listing) => (
+                    <ListingPipelineCard
+                      key={listing.id}
+                      listing={listing}
+                      events={eventsByListing.get(listing.id) ?? []}
+                      onNoteAdded={load}
+                      eventsReady={eventsReady}
+                    />
+                  ))}
+                </ul>
+              )}
             </section>
           )}
         </div>

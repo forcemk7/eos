@@ -28,6 +28,7 @@
     "ai": "^6.0.106",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "d3-sankey": "^0.12.3",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.577.0",
     "mammoth": "^1.7.0",
@@ -42,6 +43,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/d3-sankey": "^0.12.5",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",

@@ -1,8 +1,10 @@
 'use client'
 
 import * as React from 'react'
+import type { User } from '@supabase/supabase-js'
 import { Database, Briefcase, Sparkles, FileText, FileCode, GitBranch } from 'lucide-react'
 import type { Tab } from './AppSidebar'
+import { ApplicationPipelineDashboardStrip } from '@/app/components/applications/ApplicationPipelineDashboardStrip'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
 import { AppShell, AppPageHeader } from '@/app/components/shell'
@@ -17,6 +19,7 @@ const FEATURES: { tab: Tab; title: string; description: string; icon: React.Elem
 ]
 
 interface DashboardProps {
+  user: User | null
   onNavigate: (tab: Tab) => void
   totalIncomplete?: number
   dataIncompleteCount?: number
@@ -25,6 +28,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({
+  user,
   onNavigate,
   totalIncomplete = 0,
   onViewIncomplete,
@@ -60,8 +64,8 @@ export function Dashboard({
             <div className="min-w-0 space-y-1">
               <h2 className="text-base font-semibold text-foreground">Application pipeline &amp; log</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Boards, off-platform applies, outcome mix, and timeline updates—with CSV export when you want
-                spreadsheet or Sankey-style charts.
+                Boards, off-platform applies, Sankey pipeline view, and timeline updates—with CSV export for deeper
+                analysis.
               </p>
             </div>
           </div>
@@ -70,6 +74,8 @@ export function Dashboard({
           </Button>
         </CardContent>
       </Card>
+
+      <ApplicationPipelineDashboardStrip user={user} onOpenApplications={() => onNavigate('applications')} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map(({ tab, title, description, icon }) => (

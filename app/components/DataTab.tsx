@@ -17,6 +17,7 @@ import {
   AdditionalPanel,
   type DataTabHandlers,
 } from './DataTabPanels'
+import TargetProfilePanel from './TargetProfilePanel'
 
 interface DataTabProps {
   initialData: ResumeData | null
@@ -41,6 +42,7 @@ export default function DataTab({
   const [activeTab, setActiveTab] = useState<
     'contact' | 'links' | 'summary' | 'experience' | 'education' | 'achievements' | 'skills' | 'languages' | 'additional'
   >('contact')
+  const [targetProfileRefreshKey, setTargetProfileRefreshKey] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -295,6 +297,7 @@ export default function DataTab({
     setSaving(true)
     try {
       await onSave(data)
+      setTargetProfileRefreshKey((k) => k + 1)
     } finally {
       setSaving(false)
     }
@@ -330,6 +333,7 @@ export default function DataTab({
       setUploadStatus('Done.')
       onDataChange()
       setData(normalizedResumeData(mergeData.profile))
+      setTargetProfileRefreshKey((k) => k + 1)
     } catch (err: unknown) {
       setUploadStatus(err instanceof Error ? err.message : 'Something went wrong.')
       setUploadError(true)
@@ -367,6 +371,7 @@ export default function DataTab({
       setPastedText('')
       onDataChange()
       setData(normalizedResumeData(mergeData.profile))
+      setTargetProfileRefreshKey((k) => k + 1)
     } catch (err: unknown) {
       setUploadStatus(err instanceof Error ? err.message : 'Something went wrong.')
       setUploadError(true)
@@ -398,19 +403,20 @@ export default function DataTab({
     onCompletenessChange?.(dataCount)
   }, [dataCount, onCompletenessChange])
 
-  const hasData =
+  const hasData = Boolean(
     data.identity.name ||
-    data.identity.email ||
-    data.identity.phone ||
-    data.identity.location ||
-    (data.links?.length ?? 0) > 0 ||
-    data.summary ||
-    data.experience.length > 0 ||
-    (data.education?.length ?? 0) > 0 ||
-    (data.achievements?.length ?? 0) > 0 ||
-    data.skills.length > 0 ||
-    (data.languages?.length ?? 0) > 0 ||
-    (data.additional?.length ?? 0) > 0
+      data.identity.email ||
+      data.identity.phone ||
+      data.identity.location ||
+      (data.links?.length ?? 0) > 0 ||
+      data.summary ||
+      data.experience.length > 0 ||
+      (data.education?.length ?? 0) > 0 ||
+      (data.achievements?.length ?? 0) > 0 ||
+      data.skills.length > 0 ||
+      (data.languages?.length ?? 0) > 0 ||
+      (data.additional?.length ?? 0) > 0
+  )
 
   const totalChunks =
     (data.summary ? 1 : 0) +
@@ -515,6 +521,8 @@ export default function DataTab({
           <p className={uploadError ? 'data-upload-error' : 'data-upload-status'}>{uploadStatus}</p>
         )}
       </section>
+
+      <TargetProfilePanel hasData={hasData} refreshKey={targetProfileRefreshKey} />
 
       <section className="data-content panel">
         <div className="data-content-head">

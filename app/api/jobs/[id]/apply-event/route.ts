@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, jsonWithCookies } from '@/lib/supabase/server'
 import { rowToJobListing } from '@/lib/jobs/jobListingRow'
+import { validatePipelineStageInput } from '@/lib/jobs/pipelineTaxonomy'
 
 const DECISIONS = new Set(['applied', 'not_applied', 'later'])
 
@@ -21,7 +22,7 @@ export async function POST(
 
     const { data: listing, error: findErr } = await supabase
       .from('job_listings')
-      .select('id')
+      .select('id, apply_decision, pipeline_stage')
       .eq('id', listingId)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -111,6 +112,60 @@ export async function POST(
       return jsonWithCookies({ success: true, listing: rowToJobListing(row as Record<string, unknown>) }, response)
     }
 
+    if (type === 'pipeline_stage_set') {
+      const validated = validatePipelineStageInput(body.stage)
+      if (!validated.ok) {
+        return NextResponse.json({ success: false, error: validated.error }, { status: 400 })
+      }
+      if (listing.apply_decision !== 'applied') {
+        return NextResponse.json(
+          { success: false, error: 'pipeline stage can only be set when apply_decision is applied' },
+          { status: 400 }
+        )
+      }
+      const previous =
+        typeof listing.pipeline_stage === 'string' && listing.pipeline_stage.trim()
+          ? listing.pipeline_stage.trim()
+          : null
+      const next = validated.value
+
+      const { data: row, error: upErr } = await supabase
+        .from('job_listings')
+        .update({ pipeline_stage: next, updated_at: now })
+        .eq('id', listingId)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (upErr) {
+        if (upErr.message?.includes('pipeline_stage') || upErr.code === '42703') {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                'Database is missing pipeline_stage column. Run backend/migrations/20250320_t8_pipeline_stage.sql (or latest schema.sql).',
+            },
+            { status: 503 }
+          )
+        }
+        console.error('pipeline_stage_set update:', upErr)
+        return NextResponse.json({ success: false, error: upErr.message }, { status: 500 })
+      }
+
+      const { error: evErr } = await supabase.from('application_events').insert({
+        user_id: user.id,
+        job_listing_id: listingId,
+        event_type: 'pipeline_stage_change',
+        details: { stage: next, previous },
+      })
+      if (evErr) {
+        console.error('application_events pipeline_stage_change:', evErr)
+        return NextResponse.json({ success: false, error: evErr.message }, { status: 500 })
+      }
+
+      return jsonWithCookies({ success: true, listing: rowToJobListing(row as Record<string, unknown>) }, response)
+    }
+
     if (type === 'pipeline_note') {
       const note = typeof body.note === 'string' ? body.note.trim() : ''
       if (!note) {
@@ -144,7 +199,10 @@ export async function POST(
     }
 
     return NextResponse.json(
-      { success: false, error: 'type must be apply_outbound_click, apply_decision, or pipeline_note' },
+      {
+        success: false,
+        error: 'type must be apply_outbound_click, apply_decision, pipeline_stage_set, or pipeline_note',
+      },
       { status: 400 }
     )
   } catch (err: unknown) {

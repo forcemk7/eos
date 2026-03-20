@@ -131,6 +131,7 @@ export function ApplyReturnPrompt({
         apply_decision_at: listing.apply_decision_at,
         apply_notes: listing.apply_notes,
         apply_remind_at: listing.apply_remind_at,
+        pipeline_stage: listing.pipeline_stage ?? null,
       })
       sessionStorage.removeItem(STORAGE_KEY)
       setOpen(false)

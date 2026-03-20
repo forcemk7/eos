@@ -31,7 +31,7 @@ export async function mergeDiscoverApplyState(
   const { data: rows, error } = await supabase
     .from('job_listings')
     .select(
-      'id, external_id, apply_outbound_at, apply_decision, apply_decision_at, apply_notes, apply_remind_at'
+      'id, external_id, apply_outbound_at, apply_decision, apply_decision_at, apply_notes, apply_remind_at, pipeline_stage'
     )
     .eq('user_id', userId)
     .eq('source', JSEARCH)
@@ -67,6 +67,7 @@ export async function mergeDiscoverApplyState(
       apply_decision_at: (row.apply_decision_at as string) ?? null,
       apply_notes: (row.apply_notes as string) ?? null,
       apply_remind_at: (row.apply_remind_at as string) ?? null,
+      pipeline_stage: (row.pipeline_stage as string) ?? null,
     }
   })
 }
@@ -80,6 +81,7 @@ function nullApplyFields(stable: string) {
     apply_decision_at: null as string | null,
     apply_notes: null as string | null,
     apply_remind_at: null as string | null,
+    pipeline_stage: null as string | null,
   }
 }
 

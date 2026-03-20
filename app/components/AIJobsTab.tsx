@@ -159,6 +159,7 @@ export default function AIJobsTab({ onOpenDataTab }: AIJobsTabProps) {
         aiQualRef.current = getData.qualifications
         setJobSearchAnchor(getData.anchor ?? null)
       } else {
+        setJobSearchAnchor(null)
         setAiGenerating(true)
         try {
           const postRes = await fetch('/api/jobs/qualifications', {

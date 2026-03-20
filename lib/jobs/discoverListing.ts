@@ -22,4 +22,5 @@ export type DiscoverListingWithApply = DiscoverListing & {
   apply_decision_at: string | null
   apply_notes: string | null
   apply_remind_at: string | null
+  pipeline_stage: string | null
 }

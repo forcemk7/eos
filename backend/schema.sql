@@ -502,6 +502,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_listings' AND column_name = 'apply_remind_at') THEN
     ALTER TABLE job_listings ADD COLUMN apply_remind_at TIMESTAMPTZ;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_listings' AND column_name = 'pipeline_stage') THEN
+    ALTER TABLE job_listings ADD COLUMN pipeline_stage TEXT;
+  END IF;
 END $$;
 
 CREATE TABLE IF NOT EXISTS application_events (
@@ -536,10 +539,39 @@ CREATE TABLE IF NOT EXISTS job_qualifications (
   search_query TEXT NOT NULL DEFAULT 'jobs',
   location TEXT,
   remote BOOLEAN DEFAULT true,
-  generated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  target_roles JSONB NOT NULL DEFAULT '[]'::jsonb,
+  target_sectors JSONB NOT NULL DEFAULT '[]'::jsonb,
+  profile_as_of TIMESTAMPTZ,
+  dismissed_role_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
+  dismissed_sector_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
+  pinned_role_key TEXT
 );
 
 ALTER TABLE job_qualifications ENABLE ROW LEVEL SECURITY;
+
+-- T4 columns for existing deployments (safe if already present)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_qualifications' AND column_name = 'target_roles') THEN
+    ALTER TABLE job_qualifications ADD COLUMN target_roles JSONB NOT NULL DEFAULT '[]'::jsonb;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_qualifications' AND column_name = 'target_sectors') THEN
+    ALTER TABLE job_qualifications ADD COLUMN target_sectors JSONB NOT NULL DEFAULT '[]'::jsonb;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_qualifications' AND column_name = 'profile_as_of') THEN
+    ALTER TABLE job_qualifications ADD COLUMN profile_as_of TIMESTAMPTZ;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_qualifications' AND column_name = 'dismissed_role_keys') THEN
+    ALTER TABLE job_qualifications ADD COLUMN dismissed_role_keys JSONB NOT NULL DEFAULT '[]'::jsonb;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_qualifications' AND column_name = 'dismissed_sector_keys') THEN
+    ALTER TABLE job_qualifications ADD COLUMN dismissed_sector_keys JSONB NOT NULL DEFAULT '[]'::jsonb;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_qualifications' AND column_name = 'pinned_role_key') THEN
+    ALTER TABLE job_qualifications ADD COLUMN pinned_role_key TEXT;
+  END IF;
+END $$;
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'job_qualifications_select_own' AND tablename = 'job_qualifications') THEN
