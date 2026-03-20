@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { AppShell, AppPageHeader } from '@/app/components/shell'
 
 interface ResumeUploadProps {
   onSuccess: () => void
@@ -68,11 +69,14 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
   }
 
   return (
-    <div className="resume-first">
-      <h1 className="resume-first-title">Your resume, in the cloud</h1>
-      <p className="resume-first-subtitle">
-        Upload once to get started. We’ll turn it into an editable, versioned doc — manage it here and export to PDF whenever you need a file.
-      </p>
+    <AppShell>
+      <div className="resume-first mx-auto w-full max-w-lg">
+        <AppPageHeader
+          as="h1"
+          variant="section"
+          title="Your resume, in the cloud"
+          description="Upload once to get started. We’ll turn it into an editable, versioned doc — manage it here and export to PDF whenever you need a file."
+        />
 
       <div
         role="button"
@@ -99,6 +103,7 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
       {status && (
         <p className={`resume-upload-status ${error ? 'error' : ''}`}>{status}</p>
       )}
-    </div>
+      </div>
+    </AppShell>
   )
 }

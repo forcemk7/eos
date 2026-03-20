@@ -577,9 +577,7 @@ textarea::placeholder {
 
 /* ── Data tab ───────────────────────────────────────────── */
 
-.data-tab {
-  /* layout: parent .app-shell */
-}
+/* .data-tab: layout from parent .app-shell (DataTab) */
 
 .data-upload .data-section-title,
 .data-content .data-section-title {
@@ -763,9 +761,7 @@ textarea::placeholder {
 
 /* ── Jobs tab ───────────────────────────────────────────── */
 
-.jobs-tab {
-  /* layout: parent .app-shell (JobsShell) */
-}
+/* .jobs-tab: class hook for job boards; layout from AppShell */
 
 /* ── Cover letter tab ───────────────────────────────────── */
 
@@ -970,6 +966,11 @@ textarea::placeholder {
 
 .cover-letter-drawer-search::placeholder {
   color: var(--text-muted);
+}
+
+.cover-letter-drawer-skeleton-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .cover-letter-drawer-empty {
@@ -2475,7 +2476,7 @@ textarea::placeholder {
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: 24px;
-  max-width: 1200px;
+  width: 100%;
 }
 
 .resume-editor-main {

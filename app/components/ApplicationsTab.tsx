@@ -12,7 +12,7 @@ import {
   CircleDot,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { JobsShell } from '@/app/components/jobs/JobsShell'
+import { AppShell, AppLoadingBlock } from '@/app/components/shell'
 import type { JobListingRow } from '@/lib/jobs/jobListingRow'
 import type { ApplicationReportMeta } from '@/lib/jobs/applicationReportMeta'
 import { ApplicationInsights } from '@/app/components/applications/ApplicationInsights'
@@ -380,8 +380,7 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
   const showEmpty = !loading && !error && listings.length === 0
 
   return (
-    <JobsShell>
-      <div className="applications-log-page mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10">
+    <AppShell className="applications-log-page">
         <div className="relative mb-10 overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-primary/[0.04] p-6 shadow-sm md:p-8">
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl" />
@@ -400,7 +399,10 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
             <div className="flex flex-shrink-0 flex-wrap gap-2">
               <ManualApplicationSheet onLogged={load} />
               <Button type="button" variant="outline" size="default" onClick={load} disabled={loading} className="gap-2">
-                <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} aria-hidden />
+                <RefreshCw
+                  className={cn('h-4 w-4', loading && 'animate-spin motion-reduce:animate-none')}
+                  aria-hidden
+                />
                 Refresh
               </Button>
               <Button
@@ -427,12 +429,7 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
             </div>
           )}
 
-          {loading && (
-            <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-              <RefreshCw className="h-4 w-4 animate-spin" aria-hidden />
-              Loading your pipeline…
-            </div>
-          )}
+          {loading && <AppLoadingBlock message="Loading your pipeline…" />}
 
           {!loading && !error && listings.length > 0 && (
             <ApplicationInsights listings={listings} pipelineNotesCount={pipelineNotesCount} />
@@ -506,7 +503,6 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
             </section>
           )}
         </div>
-      </div>
-    </JobsShell>
+    </AppShell>
   )
 }

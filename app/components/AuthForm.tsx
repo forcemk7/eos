@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { AppShell, AppPageHeader } from '@/app/components/shell'
 import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'signin' | 'signup'
@@ -36,10 +37,16 @@ export default function AuthForm() {
   }
 
   return (
-    <div className="auth-first">
-      <h1 className="auth-title">eOS</h1>
-      <p className="auth-subtitle">Resume in the cloud — sign in to continue</p>
-      <form onSubmit={handleSubmit} className="auth-form">
+    <AppShell>
+      <div className="auth-first mx-auto w-full max-w-sm">
+        <AppPageHeader
+          className="mb-6"
+          as="h1"
+          variant="page"
+          title="eOS"
+          description="Resume in the cloud — sign in to continue."
+        />
+        <form onSubmit={handleSubmit} className="auth-form">
         <div className="field-group">
           <label htmlFor="auth-email">Email</label>
           <input
@@ -76,7 +83,8 @@ export default function AuthForm() {
         >
           {mode === 'signin' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
         </button>
-      </form>
-    </div>
+        </form>
+      </div>
+    </AppShell>
   )
 }

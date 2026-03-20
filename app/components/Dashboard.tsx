@@ -30,13 +30,13 @@ export function Dashboard({
   onViewIncomplete,
 }: DashboardProps) {
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Overview of your job application tools. Open a card to get started.
-        </p>
-      </div>
+    <AppShell className="dashboard-page">
+      <AppPageHeader
+        as="h1"
+        variant="page"
+        title="Dashboard"
+        description="Overview of your job application tools. Open a card to get started."
+      />
 
       {totalIncomplete > 0 && onViewIncomplete && (
         <Card className="border-amber-500/40 bg-amber-500/5">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { AppShell } from '@/app/components/shell'
 import { exportResumeToPdf } from '@/lib/exportResumePdf'
 import { applyResumeSuggestion, type ResumeSuggestion } from '@/lib/applyResumeSuggestion'
 import ResumePreview, { TEMPLATE_IDS, type TemplateId } from './ResumePreview'
@@ -222,12 +223,13 @@ export default function ResumeEditor({
   }
 
   return (
+    <AppShell variant="wide">
     <div className="resume-editor-layout">
       <div className="resume-editor-main">
         <div className="resume-editor-header">
           <div className="resume-editor-header-text">
-            <h1 className="resume-editor-title">Resume</h1>
-            <p className="resume-editor-subtitle">
+            <h1 className="app-section-title text-[1.15rem]">Resume</h1>
+            <p className="app-section-hint mt-1">
               Edit below. Save creates a new version. Switch layout to see the same data in different styles.
             </p>
           </div>
@@ -436,5 +438,6 @@ export default function ResumeEditor({
         </div>
       </aside>
     </div>
+    </AppShell>
   )
 }

@@ -14,6 +14,7 @@ import CoverLetterTab from './components/CoverLetterTab'
 import { AppSidebar, type Tab } from './components/AppSidebar'
 import { AppTopBar } from './components/AppTopBar'
 import { Dashboard } from './components/Dashboard'
+import { AppShell, AppLoadingBlock } from './components/shell'
 
 interface ResumeVersion {
   id: string
@@ -196,7 +197,9 @@ export default function Home() {
               </div>
             )}
             {loading ? (
-              <p className="loading-message">Loading…</p>
+              <AppShell>
+                <AppLoadingBlock message="Loading your workspace…" className="justify-center" />
+              </AppShell>
             ) : tab === 'dashboard' ? (
               <Dashboard
                 onNavigate={handleNavigate}

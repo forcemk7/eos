@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import type { ResumeData } from '@/lib/profile'
 import { normalizedResumeData, genId } from '@/lib/profile'
 import { getDataIncompleteCount } from '@/lib/profileCompleteness'
+import { AppShell } from '@/app/components/shell'
 import {
   ContactPanel,
   LinksPanel,
@@ -467,7 +468,7 @@ export default function DataTab({
   }
 
   return (
-    <div className="data-tab">
+    <AppShell className="data-tab">
       <section className="data-upload data-upload-compact panel">
         <div
           className="data-upload-row"
@@ -517,7 +518,7 @@ export default function DataTab({
 
       <section className="data-content panel">
         <div className="data-content-head">
-          <h2 className="data-section-title">Your data</h2>
+          <h2 className="app-section-title">Your data</h2>
           {hasData && (
             <div className="data-actions">
               <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>
@@ -528,8 +529,9 @@ export default function DataTab({
           )}
         </div>
         {!hasData ? (
-          <p className="data-empty-hint">
-            Upload a file or paste text above. We’ll extract Contact, Experience, Education, Achievements, Skills, Languages, and Additional into the tabs below.
+          <p className="m-0 rounded-xl border border-dashed border-border bg-muted/15 px-4 py-4 text-sm leading-relaxed text-muted-foreground">
+            Upload a file or paste text above. We’ll extract Contact, Experience, Education, Achievements, Skills,
+            Languages, and Additional into the tabs below.
           </p>
         ) : (
           <>
@@ -561,6 +563,6 @@ export default function DataTab({
           </>
         )}
       </section>
-    </div>
+    </AppShell>
   )
 }

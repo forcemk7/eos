@@ -271,7 +271,7 @@ export default function JobsTab() {
   return (
     <JobsShell>
       <Card className="jobs-board-surface border-border">
-        <CardHeader className="jobs-board-header">
+        <CardHeader className="jobs-board-header app-board-header">
           <CardTitle className="jobs-section-title">Job board</CardTitle>
           <CardDescription className="jobs-section-hint">
             {hasSearched

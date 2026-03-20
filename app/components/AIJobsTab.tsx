@@ -233,7 +233,7 @@ export default function AIJobsTab() {
   return (
     <JobsShell>
       <Card className="jobs-board-surface border-border">
-        <CardHeader className="jobs-board-header">
+        <CardHeader className="jobs-board-header app-board-header">
           <CardTitle className="jobs-section-title">AI job board</CardTitle>
           <CardDescription className="jobs-section-hint">
             Roles matched to your profile. Search terms are generated from your Data tab.

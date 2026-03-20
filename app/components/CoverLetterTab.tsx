@@ -665,7 +665,14 @@ export default function CoverLetterTab() {
               />
             </div>
             {loadingChats ? (
-              <p className="cover-letter-loading">Loading…</p>
+              <ul className="cover-letter-chat-list" aria-busy="true" aria-label="Loading chats">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <li key={i} className="cover-letter-drawer-skeleton-item">
+                    <div className="jobs-skeleton-line jobs-skeleton-line--title" />
+                    <div className="jobs-skeleton-line jobs-skeleton-line--meta mt-2" />
+                  </li>
+                ))}
+              </ul>
             ) : (
               <ul className="cover-letter-chat-list">
                 {filteredChats.map((chat) => (
