@@ -9,7 +9,6 @@ import { STRONG_MATCH_CRITERIA_BULLETS, isStrongMatch, toClientFitResult, type J
 import { splitIntoSentences } from '@/lib/utils'
 import { JobFitExplainModal } from '@/app/components/jobs/JobFitExplainModal'
 import type { DiscoverListingWithApply } from '@/app/components/jobs/types'
-import { listingToSyncBody } from '@/lib/jobs/syncDiscoverListing'
 
 type LoopIterationRow = {
   id: string
@@ -31,6 +30,22 @@ type SessionRow = {
   status: string
   created_at: string
   updated_at: string
+}
+
+function listingToSyncBody(l: DiscoverListingWithApply) {
+  return {
+    external_id: l.external_id,
+    source: l.source,
+    title: l.title,
+    company: l.company,
+    url: l.url,
+    location: l.location,
+    remote: l.remote,
+    description: l.description,
+    snippet: l.snippet,
+    posted_at: l.posted_at,
+    raw: l.raw,
+  }
 }
 
 function bestScoreFromEvals(evals: unknown): number | null {
