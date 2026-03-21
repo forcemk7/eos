@@ -2,13 +2,18 @@
 
 import { useState, useRef } from 'react'
 import { AppShell, AppPageHeader } from '@/app/components/shell'
+import { cn } from '@/lib/utils'
 
 interface ResumeUploadProps {
   onSuccess: () => void
 }
 
+type UploadPhase = 'idle' | 'parse' | 'save' | 'done'
+
 export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
-  const [status, setStatus] = useState('')
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase>('idle')
+  const [activeFileName, setActiveFileName] = useState<string | null>(null)
+  const [statusDetail, setStatusDetail] = useState('')
   const [error, setError] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -19,7 +24,9 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
     const formData = new FormData()
     formData.append('file', file)
 
-    setStatus('Parsing your resume…')
+    setActiveFileName(file.name)
+    setUploadPhase('parse')
+    setStatusDetail('Extracting text and structuring your resume…')
     setError(false)
 
     try {
@@ -34,7 +41,8 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
         throw new Error(parseData.error || 'Failed to parse resume.')
       }
 
-      setStatus('Saving first version…')
+      setUploadPhase('save')
+      setStatusDetail('Writing your first version to the workspace…')
 
       const saveRes = await fetch('/api/resume', {
         method: 'POST',
@@ -53,10 +61,15 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
         throw new Error(saveData.error || 'Failed to save.')
       }
 
-      setStatus('Done.')
-      onSuccess()
+      setUploadPhase('done')
+      setStatusDetail(`Saved “${parseData.fileName || file.name}” — opening the editor…`)
+      requestAnimationFrame(() => {
+        onSuccess()
+      })
     } catch (err: unknown) {
-      setStatus(err instanceof Error ? err.message : 'Something went wrong.')
+      setUploadPhase('idle')
+      setActiveFileName(null)
+      setStatusDetail(err instanceof Error ? err.message : 'Something went wrong.')
       setError(true)
     }
   }
@@ -68,6 +81,8 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
     if (file) uploadFile(file)
   }
 
+  const showStepper = activeFileName !== null || uploadPhase !== 'idle'
+
   return (
     <AppShell>
       <div className="resume-first mx-auto w-full max-w-lg">
@@ -78,31 +93,88 @@ export default function ResumeUpload({ onSuccess }: ResumeUploadProps) {
           description="Upload once to get started. We’ll turn it into an editable, versioned doc — manage it here and export to PDF whenever you need a file."
         />
 
-      <div
-        role="button"
-        tabIndex={0}
-        className={`resume-dropzone ${dragOver ? 'drag-over' : ''}`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
-        onClick={() => fileInputRef.current?.click()}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])}
-          className="resume-file-input-hidden"
-          aria-hidden
-        />
-        <p className="dropzone-title">Drop your resume here</p>
-        <p className="dropzone-subtitle">or click to choose PDF or DOCX</p>
-      </div>
+        <div
+          role="button"
+          tabIndex={0}
+          className={`resume-dropzone ${dragOver ? 'drag-over' : ''}`}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragOver(true)
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              fileInputRef.current?.click()
+            }
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])}
+            className="resume-file-input-hidden"
+            aria-hidden
+          />
+          <p className="dropzone-title">Drop your resume here</p>
+          <p className="dropzone-subtitle">or click to choose PDF or DOCX</p>
+        </div>
 
-      {status && (
-        <p className={`resume-upload-status ${error ? 'error' : ''}`}>{status}</p>
-      )}
+        {showStepper && (
+          <ol className="resume-upload-steps" aria-label="Upload progress">
+            <li
+              className={cn(
+                'resume-upload-step',
+                uploadPhase !== 'idle' && 'resume-upload-step--done'
+              )}
+            >
+              <span className="resume-upload-step-num">1</span>
+              <span className="resume-upload-step-label">
+                Upload
+                {activeFileName ? (
+                  <span className="resume-upload-step-file" title={activeFileName}>
+                    {' '}
+                    · {activeFileName}
+                  </span>
+                ) : null}
+              </span>
+            </li>
+            <li
+              className={cn(
+                'resume-upload-step',
+                (uploadPhase === 'save' || uploadPhase === 'done') && 'resume-upload-step--done',
+                uploadPhase === 'parse' && 'resume-upload-step--active'
+              )}
+            >
+              <span className="resume-upload-step-num">2</span>
+              <span className="resume-upload-step-label">Parse</span>
+            </li>
+            <li
+              className={cn(
+                'resume-upload-step',
+                uploadPhase === 'done' && 'resume-upload-step--done',
+                uploadPhase === 'save' && 'resume-upload-step--active'
+              )}
+            >
+              <span className="resume-upload-step-num">3</span>
+              <span className="resume-upload-step-label">Save to workspace</span>
+            </li>
+          </ol>
+        )}
+
+        {(statusDetail || error) && (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className={cn('resume-upload-status', error && 'error')}
+          >
+            {statusDetail}
+          </div>
+        )}
       </div>
     </AppShell>
   )

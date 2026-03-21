@@ -64,6 +64,10 @@ interface ResumeEditorProps {
   onRestore: (versionId: string) => Promise<void>
   /** `profile` when editor reflects live server profile; UUID after restoring a historical version. */
   resumeSourceId: string
+  /** Latest upload/save filename (from current row or newest version). */
+  sourceFileName?: string | null
+  /** ISO timestamp: last snapshot when editing profile (newest version), or the restored row when viewing history. */
+  savedSnapshotAt?: string | null
   currentTailoring?: ResumeVersionTailoring | null
   tailorSession?: TailorResumeSession | null
   onDismissTailor?: () => void
@@ -77,6 +81,8 @@ export default function ResumeEditor({
   onSave,
   onRestore,
   resumeSourceId,
+  sourceFileName = null,
+  savedSnapshotAt = null,
   currentTailoring = null,
   tailorSession,
   onDismissTailor,
@@ -85,6 +91,8 @@ export default function ResumeEditor({
 }: ResumeEditorProps) {
   const [data, setData] = useState<ResumeData>(() => normalizedResumeData(initialData))
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccessAt, setSaveSuccessAt] = useState<number | null>(null)
   const [restoringId, setRestoringId] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<ResumeSuggestion[]>([])
   const [suggestLoading, setSuggestLoading] = useState(true)
@@ -105,7 +113,23 @@ export default function ResumeEditor({
     setData(normalizedResumeData(initialData))
   }, [initialData])
 
+  useEffect(() => {
+    setSaveError(null)
+  }, [initialData])
+
+  useEffect(() => {
+    if (!saveSuccessAt) return
+    const t = window.setTimeout(() => setSaveSuccessAt(null), 4500)
+    return () => window.clearTimeout(t)
+  }, [saveSuccessAt])
+
   const dataSerialized = useMemo(() => JSON.stringify(normalizedResumeData(data)), [data])
+  const initialSerialized = useMemo(() => JSON.stringify(normalizedResumeData(initialData)), [initialData])
+  const dirty = dataSerialized !== initialSerialized
+
+  useEffect(() => {
+    if (dirty) setSaveSuccessAt(null)
+  }, [dirty])
   const readoutDirty =
     Boolean(artifactReadout && lastReadoutSerialized !== null && lastReadoutSerialized !== dataSerialized)
 
@@ -260,9 +284,13 @@ export default function ResumeEditor({
   }
 
   async function handleSave() {
+    setSaveError(null)
     setSaving(true)
     try {
       await onSave(data)
+      setSaveSuccessAt(Date.now())
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -330,6 +358,59 @@ export default function ResumeEditor({
       return created_at
     }
   }
+
+  const formatSavedClock = (ts: number) => {
+    try {
+      return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    } catch {
+      return ''
+    }
+  }
+
+  const hasMetaRow = Boolean(sourceFileName || savedSnapshotAt)
+  const documentStatusStrip = (
+    <div
+      className="resume-doc-status mt-3 rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-sm space-y-2"
+      role="region"
+      aria-label="Resume document status"
+    >
+      {hasMetaRow ? (
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-muted-foreground">
+          {sourceFileName ? (
+            <span className="min-w-0 max-w-full">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/90">Source file</span>{' '}
+              <span className="text-foreground font-medium break-all">{sourceFileName}</span>
+            </span>
+          ) : null}
+          {savedSnapshotAt && resumeSourceId === 'profile' ? (
+            <span>
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/90">Last saved</span>{' '}
+              <span className="text-foreground">{formatVersionDate(savedSnapshotAt)}</span>
+            </span>
+          ) : null}
+          {savedSnapshotAt && resumeSourceId !== 'profile' ? (
+            <span>
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground/90">Snapshot from</span>{' '}
+              <span className="text-foreground">{formatVersionDate(savedSnapshotAt)}</span>
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {dirty ? (
+        <p className="m-0 text-sm font-medium text-warning">Unsaved changes — Save version to keep them.</p>
+      ) : saveSuccessAt ? (
+        <p className="m-0 text-sm text-foreground/90">Saved ({formatSavedClock(saveSuccessAt)}).</p>
+      ) : resumeSourceId === 'profile' ? (
+        <p className="m-0 text-xs text-muted-foreground">All changes saved to your profile.</p>
+      ) : null}
+      {resumeSourceId !== 'profile' ? (
+        <p className="m-0 text-sm text-warning">
+          You&apos;re editing a restored snapshot — Save version to make it your live profile and sync with Data.
+        </p>
+      ) : null}
+      {saveError ? <p className="m-0 text-sm text-destructive">{saveError}</p> : null}
+    </div>
+  )
 
   const archetypeDiff = useMemo(() => {
     if (!dataReadout || !artifactReadout) return null
@@ -429,13 +510,6 @@ export default function ResumeEditor({
               {readoutLoading ? 'Refreshing…' : 'Refresh readout'}
             </Button>
           </div>
-
-          {resumeSourceId !== 'profile' && (
-            <p className="m-0 mt-3 rounded-lg border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
-              You&apos;re editing a restored version that isn&apos;t saved to your profile yet. Save to sync this
-              content with Data — until then, recruiters see a different &quot;packet&quot; than what&apos;s stored.
-            </p>
-          )}
 
           {tailoredContext && (
             <p className="m-0 mt-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm text-foreground/90">
@@ -711,17 +785,39 @@ export default function ResumeEditor({
         </div>
         <div className="resume-versions panel">
           <h2 className="resume-section-title">Version history</h2>
-          <p className="resume-versions-hint">Each save is a new version. Restore loads that version into the editor.</p>
+          <p className="resume-versions-hint">
+            Each save is a new version. Restore loads a snapshot into the editor; Save version to write it back to your
+            profile.
+          </p>
           <ul className="resume-versions-list">
-            {versions.map((v) => {
+            {versions.map((v, index) => {
               const tlabel = tailoringLabel(v.tailoring ?? null)
               const canViewListing =
                 onShowListingInBoard &&
                 v.tailoring &&
                 (v.tailoring.stable_external_id || v.tailoring.url)
+              const isLatestSave = resumeSourceId === 'profile' && index === 0
+              const isEditingSnapshot = resumeSourceId !== 'profile' && v.id === resumeSourceId
               return (
-                <li key={v.id} className="resume-version-item">
+                <li
+                  key={v.id}
+                  className={cn(
+                    'resume-version-item',
+                    (isLatestSave || isEditingSnapshot) &&
+                      'ring-1 ring-primary/35 rounded-lg border border-primary/20 bg-primary/5'
+                  )}
+                >
                   <div className="resume-version-meta">
+                    {isLatestSave ? (
+                      <span className="mb-1 inline-block rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                        Latest save
+                      </span>
+                    ) : null}
+                    {isEditingSnapshot ? (
+                      <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-warning">
+                        You&apos;re editing this snapshot
+                      </span>
+                    ) : null}
                     <span className="resume-version-date">{formatVersionDate(v.created_at)}</span>
                     {v.file_name && <span className="resume-version-file">{v.file_name}</span>}
                     {tlabel && (
@@ -800,8 +896,10 @@ export default function ResumeEditor({
           <div className="resume-editor-narrow-title">
             <h1 className="eos-title-section m-0 text-lg sm:text-xl">Resume</h1>
             <p className="app-section-hint mt-1 mb-0 text-sm">
-              Edit fields below. Use Preview for layout, PDF export, and version history.
+              Contact, summary, experience, and skills are your editable narrative. Preview and PDF use the same content.
+              Use Preview for layout, export, and version history.
             </p>
+            {documentStatusStrip}
           </div>
           {tailorBanner}
           {readoutSection}
@@ -825,8 +923,10 @@ export default function ResumeEditor({
           <div className="resume-editor-header-text">
             <h1 className="eos-title-section">Resume</h1>
             <p className="app-section-hint mt-1">
-              Edit below. Save creates a new version. Switch layout to see the same data in different styles.
+              Contact, summary, experience, and skills are your editable narrative. Save creates a new version; switch
+              template to see the same data in different layouts.
             </p>
+            {documentStatusStrip}
           </div>
           <div className="resume-editor-actions">{actionButtons}</div>
         </div>

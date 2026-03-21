@@ -340,6 +340,12 @@ export default function Home() {
                   onSave={(data) => handleSave(data)}
                   onRestore={handleRestore}
                   resumeSourceId={current.id ?? 'profile'}
+                  sourceFileName={current.file_name ?? versions[0]?.file_name ?? null}
+                  savedSnapshotAt={
+                    (current.id ?? 'profile') === 'profile'
+                      ? (versions[0]?.created_at ?? null)
+                      : (versions.find((v) => v.id === current.id)?.created_at ?? null)
+                  }
                   currentTailoring={
                     current.id && current.id !== 'profile'
                       ? versions.find((v) => v.id === current.id)?.tailoring ?? null
