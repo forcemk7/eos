@@ -1556,6 +1556,25 @@ textarea::placeholder {
   border-radius: var(--radius);
 }
 
+@media (max-width: 380px) {
+  .cover-letter-input-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .cover-letter-input-row .cover-letter-input {
+    padding: 8px 0;
+    width: 100%;
+  }
+
+  .cover-letter-input-row .cover-letter-send {
+    align-self: stretch;
+    width: 100%;
+  }
+}
+
 .cover-letter-pending-images {
   display: flex;
   flex-wrap: wrap;
@@ -1912,6 +1931,20 @@ textarea::placeholder {
 
 .jobs-filter-ai-query {
   color: var(--text);
+}
+
+.jobs-toolbar-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.jobs-toolbar-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.jobs-toolbar-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 45%, transparent);
 }
 
 .jobs-filter-chips {
@@ -2618,6 +2651,81 @@ textarea::placeholder {
   grid-template-columns: 1fr 340px;
   gap: 24px;
   width: 100%;
+}
+
+/* Narrow: tabbed editor + preview (JS adds modifier when viewport ≤840px) */
+.resume-editor-layout.resume-editor-layout--narrow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resume-editor-narrow-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 0;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--eos-border);
+}
+
+.resume-editor-narrow-toolbar {
+  width: 100%;
+}
+
+.resume-editor-narrow-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.resume-editor-narrow-tabs {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.resume-editor-narrow-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--eos-border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.resume-editor-narrow-tab:hover {
+  color: var(--text);
+  border-color: var(--border-focus);
+}
+
+.resume-editor-narrow-tab--active {
+  background: var(--eos-accent);
+  color: #fff;
+  border-color: var(--eos-accent);
+}
+
+.resume-editor-narrow-tab:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.resume-editor-narrow-panel {
+  min-width: 0;
+}
+
+.resume-editor-narrow-title {
+  margin-bottom: 4px;
 }
 
 .resume-editor-main {

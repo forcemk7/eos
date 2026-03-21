@@ -32,35 +32,51 @@ export type JobFilterBarProps = ManualJobFilterBarProps | AiJobFilterBarProps
 
 export function JobFilterBar(props: JobFilterBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [aiMobileOpen, setAiMobileOpen] = useState(false)
   const filtersId = useId()
+  const aiFiltersId = useId()
 
   if (props.variant === 'ai') {
     return (
       <div className="jobs-filter-bar jobs-filter-bar--ai">
-        <div className="jobs-filter-ai-summary">
-          <span className="jobs-filter-ai-label text-muted-foreground">Profile search</span>
-          <p className="jobs-filter-ai-query m-0 mt-1 text-sm font-medium text-foreground">
-            {props.searchQuery}
-            {props.location ? ` · ${props.location}` : ''}
-            {props.remote ? ' · Remote' : ''}
-          </p>
-        </div>
-        <div className="jobs-filter-ai-chips flex flex-wrap gap-2 mt-3">
-          {props.remote && (
-            <span className="jobs-source-pill jobs-source-pill--muted">Remote</span>
-          )}
-          {props.location && (
-            <span className="jobs-source-pill jobs-source-pill--muted">{props.location}</span>
-          )}
-          <Button
+        <div className="md:hidden">
+          <button
             type="button"
-            variant="secondary"
-            size="sm"
-            disabled={props.disabled}
-            onClick={props.onRefreshQualifications}
+            className="jobs-filter-mobile-toggle flex w-full items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-3 py-2.5 text-left text-sm font-medium text-foreground"
+            aria-expanded={aiMobileOpen}
+            aria-controls={aiFiltersId}
+            onClick={() => setAiMobileOpen((o) => !o)}
           >
-            Refresh qualifications
-          </Button>
+            <span>Profile search &amp; actions</span>
+            {aiMobileOpen ? <ChevronUp className="h-4 w-4 shrink-0" aria-hidden /> : <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />}
+          </button>
+        </div>
+
+        <div
+          id={aiFiltersId}
+          className={cn(!aiMobileOpen && 'hidden md:block', 'mt-3 md:mt-0')}
+        >
+          <div className="jobs-filter-ai-summary">
+            <span className="jobs-filter-ai-label text-muted-foreground">Profile search</span>
+            <p className="jobs-filter-ai-query m-0 mt-1 text-sm font-medium text-foreground">
+              {props.searchQuery}
+              {props.location ? ` · ${props.location}` : ''}
+              {props.remote ? ' · Remote' : ''}
+            </p>
+          </div>
+          <div className="jobs-filter-ai-chips mt-3 flex flex-wrap gap-2">
+            {props.remote && <span className="jobs-source-pill jobs-source-pill--muted">Remote</span>}
+            {props.location && <span className="jobs-source-pill jobs-source-pill--muted">{props.location}</span>}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={props.disabled}
+              onClick={props.onRefreshQualifications}
+            >
+              Refresh qualifications
+            </Button>
+          </div>
         </div>
       </div>
     )

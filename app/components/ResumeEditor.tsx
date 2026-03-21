@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useId } from 'react'
 import { AppShell } from '@/app/components/shell'
+import { useMediaQuery } from '@/app/components/jobs/useMediaQuery'
+import { cn } from '@/lib/utils'
 import { exportResumeToPdf } from '@/lib/exportResumePdf'
 import { applyResumeSuggestion, type ResumeSuggestion } from '@/lib/applyResumeSuggestion'
 import ResumePreview, { TEMPLATE_IDS, type TemplateId } from './ResumePreview'
@@ -92,6 +94,12 @@ export default function ResumeEditor({
   const [readoutLoading, setReadoutLoading] = useState(false)
   const [readoutError, setReadoutError] = useState<string | null>(null)
   const [lastReadoutSerialized, setLastReadoutSerialized] = useState<string | null>(null)
+  const narrowLayout = useMediaQuery('(max-width: 840px)')
+  const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit')
+  const tabEditId = useId()
+  const tabPreviewId = useId()
+  const panelEditId = useId()
+  const panelPreviewId = useId()
 
   useEffect(() => {
     setData(normalizedResumeData(initialData))
@@ -352,28 +360,19 @@ export default function ResumeEditor({
 
   const tailoredContext = Boolean(tailorSession || currentTailoring)
 
-  return (
-    <AppShell variant="wide">
-    <div className="resume-editor-layout">
-      <div className="resume-editor-main">
-        <div className="resume-editor-header">
-          <div className="resume-editor-header-text">
-            <h1 className="eos-title-section">Resume</h1>
-            <p className="app-section-hint mt-1">
-              Edit below. Save creates a new version. Switch layout to see the same data in different styles.
-            </p>
-          </div>
-          <div className="resume-editor-actions">
-            <Button type="button" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : 'Save version'}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleExportPdf}>
-              Export PDF
-            </Button>
-          </div>
-        </div>
+  const actionButtons = (
+    <>
+      <Button type="button" onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving…' : 'Save version'}
+      </Button>
+      <Button type="button" variant="outline" onClick={handleExportPdf}>
+        Export PDF
+      </Button>
+    </>
+  )
 
-        {tailorSession && (
+  const tailorBanner =
+    tailorSession ? (
           <div
             className="resume-tailor-banner mb-4 flex flex-col gap-3 rounded-lg border border-border bg-muted/35 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             role="status"
@@ -409,8 +408,9 @@ export default function ResumeEditor({
               ) : null}
             </div>
           </div>
-        )}
+        ) : null
 
+  const readoutSection = (
         <section className="resume-readout panel mb-4 rounded-lg border border-border bg-card/20 px-4 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -532,7 +532,10 @@ export default function ResumeEditor({
             </div>
           )}
         </section>
+  )
 
+  const formSections = (
+    <>
         <section className="resume-section">
           <h2 className="resume-section-title">Contact</h2>
           <div className="resume-fields">
@@ -684,9 +687,11 @@ export default function ResumeEditor({
           />
           {!suggestLoading && <InlineSuggestions sectionKey="skills" />}
         </section>
-      </div>
+    </>
+  )
 
-      <aside className="resume-editor-aside">
+  const previewAsideInner = (
+    <>
         <div className="resume-preview-wrap panel">
           <div className="resume-preview-tabs">
             {TEMPLATE_IDS.map((id) => (
@@ -746,8 +751,94 @@ export default function ResumeEditor({
             })}
           </ul>
         </div>
-      </aside>
+    </>
+  )
+
+  return (
+    <AppShell variant="wide">
+    {narrowLayout ? (
+      <div className="resume-editor-layout resume-editor-layout--narrow">
+        <div className="resume-editor-narrow-sticky">
+          <div className="resume-editor-narrow-toolbar">
+            <div className="resume-editor-narrow-toolbar-actions">{actionButtons}</div>
+          </div>
+          <div className="resume-editor-narrow-tabs" role="tablist" aria-label="Resume editor view">
+            <button
+              type="button"
+              role="tab"
+              id={tabEditId}
+              aria-selected={mobileTab === 'edit'}
+              aria-controls={panelEditId}
+              tabIndex={mobileTab === 'edit' ? 0 : -1}
+              className={cn('resume-editor-narrow-tab', mobileTab === 'edit' && 'resume-editor-narrow-tab--active')}
+              onClick={() => setMobileTab('edit')}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id={tabPreviewId}
+              aria-selected={mobileTab === 'preview'}
+              aria-controls={panelPreviewId}
+              tabIndex={mobileTab === 'preview' ? 0 : -1}
+              className={cn('resume-editor-narrow-tab', mobileTab === 'preview' && 'resume-editor-narrow-tab--active')}
+              onClick={() => setMobileTab('preview')}
+            >
+              Preview
+            </button>
+          </div>
+        </div>
+
+        <div
+          id={panelEditId}
+          role="tabpanel"
+          aria-labelledby={tabEditId}
+          hidden={mobileTab !== 'edit'}
+          className="resume-editor-narrow-panel"
+        >
+          <div className="resume-editor-narrow-title">
+            <h1 className="eos-title-section m-0 text-lg sm:text-xl">Resume</h1>
+            <p className="app-section-hint mt-1 mb-0 text-sm">
+              Edit fields below. Use Preview for layout, PDF export, and version history.
+            </p>
+          </div>
+          {tailorBanner}
+          {readoutSection}
+          {formSections}
+        </div>
+
+        <div
+          id={panelPreviewId}
+          role="tabpanel"
+          aria-labelledby={tabPreviewId}
+          hidden={mobileTab !== 'preview'}
+          className="resume-editor-narrow-panel resume-editor-aside"
+        >
+          {previewAsideInner}
+        </div>
+      </div>
+    ) : (
+    <div className="resume-editor-layout">
+      <div className="resume-editor-main">
+        <div className="resume-editor-header">
+          <div className="resume-editor-header-text">
+            <h1 className="eos-title-section">Resume</h1>
+            <p className="app-section-hint mt-1">
+              Edit below. Save creates a new version. Switch layout to see the same data in different styles.
+            </p>
+          </div>
+          <div className="resume-editor-actions">{actionButtons}</div>
+        </div>
+
+        {tailorBanner}
+        {readoutSection}
+        {formSections}
+      </div>
+
+      <aside className="resume-editor-aside">{previewAsideInner}</aside>
     </div>
+    )}
     </AppShell>
   )
 }

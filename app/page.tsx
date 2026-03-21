@@ -264,7 +264,7 @@ export default function Home() {
         onSheetOpenChange={setSheetOpen}
       />
       <div className="flex flex-1 flex-col min-w-0 md:ml-[15.5rem]">
-        <AppTopBar onMenuClick={() => setSheetOpen(true)} />
+        <AppTopBar currentTab={tab} onMenuClick={() => setSheetOpen(true)} />
         <main
           className={`flex min-h-0 min-w-0 flex-1 flex-col ${tab === 'cover-letter' ? ' app-content-cover-letter' : ''}`}
         >

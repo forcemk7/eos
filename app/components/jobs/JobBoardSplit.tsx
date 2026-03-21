@@ -96,6 +96,7 @@ export function JobBoardSplit({
       <Sheet open={Boolean(selected) && !isDesktop} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent
           side="right"
+          hideClose
           className="jobs-job-sheet w-full border-l p-0 sm:max-w-lg motion-reduce:!animate-none motion-reduce:!transition-none"
         >
           {selected && (
@@ -106,6 +107,7 @@ export function JobBoardSplit({
               checkAllTrigger={checkAllTrigger}
               onPatchListing={onPatchListing}
               onOpenDataTab={onOpenDataTab}
+              onTailorResume={onTailorResume}
             />
           )}
         </SheetContent>

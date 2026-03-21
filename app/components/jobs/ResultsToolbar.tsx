@@ -49,13 +49,14 @@ export function ResultsToolbar({
         {liveText}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <p className="jobs-results-count m-0 text-sm font-medium text-foreground tabular-nums">
+        <p className="jobs-results-count m-0 shrink-0 text-sm font-medium text-foreground tabular-nums">
           {loading ? '…' : `${count} role${count === 1 ? '' : 's'}`}
         </p>
         {chips.length > 0 && (
-          <ul className="jobs-filter-chips m-0 flex list-none flex-wrap gap-2 p-0">
+          <div className="min-w-0 max-md:rounded-md max-md:border max-md:border-border max-md:bg-muted/30 max-md:px-2 max-md:py-2">
+            <ul className="jobs-filter-chips m-0 flex list-none gap-2 p-0 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-0.5 md:flex-wrap md:overflow-visible jobs-toolbar-scroll">
             {chips.map((c) => (
-              <li key={c.id}>
+              <li key={c.id} className="max-md:shrink-0">
                 {c.onRemove ? (
                   <button
                     type="button"
@@ -74,10 +75,11 @@ export function ResultsToolbar({
               </li>
             ))}
           </ul>
+          </div>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2 max-md:rounded-md max-md:border max-md:border-border max-md:bg-muted/30 max-md:px-2 max-md:py-1.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 md:border-0 md:bg-transparent md:p-0 md:overflow-visible jobs-toolbar-scroll">
+        <label className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
           <span className="sr-only">Sort by</span>
           <span aria-hidden>Sort</span>
           <select
@@ -90,7 +92,7 @@ export function ResultsToolbar({
             <option value="title">Title A–Z</option>
           </select>
         </label>
-        <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="Listing density">
+        <div className="flex shrink-0 rounded-md border border-border p-0.5" role="group" aria-label="Listing density">
           <button
             type="button"
             className={cn(
@@ -115,7 +117,14 @@ export function ResultsToolbar({
           </button>
         </div>
         {showCheckFitAll && (
-          <Button type="button" variant="secondary" size="sm" disabled={checkFitDisabled} onClick={onCheckFitAll}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="shrink-0"
+            disabled={checkFitDisabled}
+            onClick={onCheckFitAll}
+          >
             Check fit for all
           </Button>
         )}

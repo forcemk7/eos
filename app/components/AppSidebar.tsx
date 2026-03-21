@@ -10,6 +10,7 @@ import {
   SheetContent,
   SheetTitle,
   SheetHeader,
+  SheetDescription,
 } from '@/app/components/ui/sheet'
 
 export type Tab = NavTabKey
@@ -98,6 +99,16 @@ export function AppSidebar({
   sheetOpen = false,
   onSheetOpenChange,
 }: AppSidebarProps) {
+  React.useEffect(() => {
+    if (!sheetOpen || onSheetOpenChange == null) return
+    const html = document.documentElement
+    const prev = html.style.overflow
+    html.style.overflow = 'hidden'
+    return () => {
+      html.style.overflow = prev
+    }
+  }, [sheetOpen, onSheetOpenChange])
+
   const navContent = (
     <NavContent
       currentTab={currentTab}
@@ -106,6 +117,8 @@ export function AppSidebar({
       resumeIncompleteCount={resumeIncompleteCount}
     />
   )
+
+  const currentLabel = navItemCopy[currentTab].label
 
   return (
     <>
@@ -132,22 +145,29 @@ export function AppSidebar({
         </div>
       </aside>
 
-      {/* Mobile: Sheet with same nav */}
+      {/* Mobile: non-modal sheet — no focus trap; scrim/scroll lock handled in sheet + effect. */}
       {onSheetOpenChange != null && (
-        <Sheet open={sheetOpen} onOpenChange={onSheetOpenChange}>
-          <SheetContent side="left" className="w-[17rem] max-w-[85vw] p-0 flex flex-col">
-            <SheetHeader className="p-4 border-b border-border text-left">
+        <Sheet modal={false} open={sheetOpen} onOpenChange={onSheetOpenChange}>
+          <SheetContent
+            side="left"
+            className="w-[17rem] max-w-[85vw] p-0 flex flex-col"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
+            <SheetHeader className="p-4 pt-[max(1rem,env(safe-area-inset-top))] border-b border-border text-left space-y-1">
               <SheetTitle className="flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-[10px] font-bold tracking-wide">
                   eOS
                 </span>
                 <span className="font-semibold">eOS</span>
               </SheetTitle>
+              <SheetDescription>Navigate sections. Current: {currentLabel}.</SheetDescription>
             </SheetHeader>
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
+            <div className="flex-1 overflow-y-auto overscroll-y-contain p-3 flex flex-col gap-4">
               {navContent}
             </div>
-            <div className="p-3 border-t border-border shrink-0">
+            <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-border shrink-0">
               <Button variant="ghost" className="w-full justify-start gap-3 font-normal min-h-[44px] py-3 transition-colors duration-150 hover:bg-muted/80" onClick={onSignOut}>
                 <LogOut className="h-4 w-4 shrink-0" />
                 Sign out

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { X } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { JobFitIndicator } from '@/app/components/JobFitIndicator'
 import { SheetHeader, SheetTitle, SheetDescription } from '@/app/components/ui/sheet'
@@ -56,8 +56,20 @@ export function JobDetailContent({
   const headerInner = (
     <>
       {layout === 'sheet' ? (
-        <SheetHeader className="space-y-1 border-b border-border p-6 pb-4 text-left">
-          <SheetTitle id="job-detail-title" className="pr-10 text-xl leading-tight">
+        <>
+          <div className="border-b border-border px-2 pb-0 pt-[max(0.5rem,env(safe-area-inset-top,0px))]">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 min-h-11 w-full justify-start gap-2 px-3 text-base font-medium text-foreground"
+              onClick={onClose}
+            >
+              <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden />
+              Back to listings
+            </Button>
+          </div>
+          <SheetHeader className="space-y-1 border-b border-border p-6 pb-4 pt-4 text-left">
+          <SheetTitle id="job-detail-title" className="text-xl leading-tight">
             {title}
           </SheetTitle>
           <SheetDescription className="sr-only">
@@ -67,6 +79,7 @@ export function JobDetailContent({
             {job.company}
           </p>
         </SheetHeader>
+        </>
       ) : (
         <header className="jobs-detail-header border-b border-border p-6 pb-4">
           <div className="flex items-start justify-between gap-3">
