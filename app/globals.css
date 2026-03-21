@@ -125,7 +125,10 @@ html, body {
 .prefs-title,
 .creds-title,
 .activity-title,
-.resume-editor-title {
+.resume-editor-title,
+.jobs-board-header .jobs-section-title,
+.jobs-section-title,
+.app-board-header .app-section-title {
   font-size: 1.125rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -141,20 +144,23 @@ html, body {
 .prefs-title,
 .creds-title,
 .activity-title,
-.resume-editor-title {
+.jobs-board-header .jobs-section-title,
+.jobs-section-title,
+.app-board-header .app-section-title {
   margin: 0 0 6px;
+}
+
+.resume-editor-title {
+  margin: 0 0 4px;
 }
 
 .eos-title-card,
 .panel h2,
 .links-panel-title,
 .cover-letter-panel .cover-letter-title,
-.jobs-filters-panel .jobs-section-title,
-.jobs-add-panel .jobs-add-title,
-.jobs-list-panel .jobs-list-title,
-.jobs-discover-panel .jobs-section-title,
 .jobs-card-title,
-.app-state-title {
+.app-state-title,
+.jobs-state-title {
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.35;
@@ -177,28 +183,35 @@ html, body {
   margin: 0 0 6px;
 }
 
-.jobs-filters-panel .jobs-section-title,
-.jobs-add-panel .jobs-add-title,
-.jobs-list-panel .jobs-list-title,
-.jobs-discover-panel .jobs-section-title {
-  margin: 0 0 6px;
-}
-
 .jobs-card-title {
   margin: 0 0 4px;
 }
 
-.app-state-title {
+.app-state-title,
+.jobs-state-title {
   margin: 0;
 }
 
-.eos-title-label {
-  margin: 0;
+.eos-title-label,
+.data-upload .data-section-title,
+.data-content .data-section-title,
+.data-chunk-group-title,
+.resume-section-title {
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
+}
+
+.eos-title-label,
+.data-chunk-group-title {
+  margin: 0;
+}
+
+.data-upload .data-section-title,
+.data-content .data-section-title {
+  margin: 0 0 8px;
 }
 
 .eos-text-hint,
@@ -391,12 +404,6 @@ html, body {
   padding: 24px;
 }
 
-.panel h2 {
-  margin: 0 0 4px;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
 .panel-subtitle {
   margin: 0 0 20px;
   font-size: 0.85rem;
@@ -419,13 +426,6 @@ html, body {
 
 .app-shell--wide {
   max-width: min(var(--content-max-wide), 100%);
-}
-
-.app-section-hint {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  line-height: 1.45;
 }
 
 .app-page-header .app-section-title {
@@ -585,12 +585,6 @@ textarea::placeholder {
   padding: 60px 0;
 }
 
-.auth-title {
-  margin: 0 0 8px;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
 .auth-subtitle {
   margin: 0 0 28px;
   font-size: 0.95rem;
@@ -633,12 +627,6 @@ textarea::placeholder {
   max-width: 520px;
   margin: 0 auto;
   padding: 48px 0;
-}
-
-.resume-first-title {
-  margin: 0 0 8px;
-  font-size: 1.4rem;
-  font-weight: 600;
 }
 
 .resume-first-subtitle {
@@ -713,16 +701,6 @@ textarea::placeholder {
 /* ── Profile tab (data) ─────────────────────────────────── */
 
 /* .data-tab: layout from parent .app-shell (DataTab) */
-
-.data-upload .data-section-title,
-.data-content .data-section-title {
-  margin: 0 0 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-}
 
 .data-section-hint {
   margin: 0 0 16px;
@@ -969,9 +947,10 @@ textarea::placeholder {
 }
 
 .cover-letter-result-label {
+  margin: 0;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text);
+  color: hsl(var(--foreground));
 }
 
 .cover-letter-draft {
@@ -1606,15 +1585,6 @@ textarea::placeholder {
   color: var(--text-muted);
 }
 
-.jobs-filters-panel .jobs-section-title,
-.jobs-add-panel .jobs-add-title,
-.jobs-list-panel .jobs-list-title {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
 .jobs-section-hint {
   margin: 0 0 12px;
   font-size: 0.9rem;
@@ -1661,13 +1631,6 @@ textarea::placeholder {
   margin: 8px 0 0;
   font-size: 0.85rem;
   color: var(--text-muted);
-}
-
-.jobs-discover-panel .jobs-section-title {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
 }
 
 .jobs-discover-filters {
@@ -1883,16 +1846,6 @@ textarea::placeholder {
   overflow: hidden;
 }
 
-.jobs-board-header .jobs-section-title,
-.jobs-section-title,
-.app-board-header .app-section-title {
-  margin: 0 0 6px;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-
 .jobs-board-split {
   display: flex;
   flex-direction: column;
@@ -2074,14 +2027,6 @@ textarea::placeholder {
   justify-content: center;
   text-align: left;
   padding: 20px;
-}
-
-.jobs-state-title,
-.app-state-title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text);
 }
 
 .jobs-state-body,
@@ -2285,15 +2230,6 @@ textarea::placeholder {
   gap: 12px;
 }
 
-.data-chunk-group-title {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-}
-
 .data-chunk-card {
   background: var(--bg-input);
   border: 1px solid var(--eos-border);
@@ -2347,12 +2283,6 @@ textarea::placeholder {
 }
 .links-panel-header {
   margin-bottom: 20px;
-}
-.links-panel-title {
-  margin: 0 0 4px 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text);
 }
 .links-panel-desc {
   margin: 0;
@@ -2692,12 +2622,6 @@ textarea::placeholder {
   min-width: 200px;
 }
 
-.resume-editor-title {
-  margin: 0 0 4px;
-  font-size: 1.15rem;
-  font-weight: 600;
-}
-
 .resume-editor-subtitle {
   margin: 0;
   font-size: 0.82rem;
@@ -2787,11 +2711,6 @@ textarea::placeholder {
 
 .resume-section-title {
   margin: 0 0 16px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
 }
 
 .resume-section-head {
@@ -3409,12 +3328,6 @@ textarea::placeholder {
   margin-bottom: 24px;
 }
 
-.prefs-title {
-  margin: 0 0 6px;
-  font-size: 1.15rem;
-  font-weight: 600;
-}
-
 .prefs-subtitle {
   margin: 0;
   font-size: 0.85rem;
@@ -3481,12 +3394,6 @@ textarea::placeholder {
 
 .creds-header {
   margin-bottom: 24px;
-}
-
-.creds-title {
-  margin: 0 0 6px;
-  font-size: 1.15rem;
-  font-weight: 600;
 }
 
 .creds-subtitle {
@@ -3595,9 +3502,6 @@ textarea::placeholder {
 }
 
 .activity-title {
-  margin: 0 0 6px;
-  font-size: 1.15rem;
-  font-weight: 600;
   width: 100%;
 }
 

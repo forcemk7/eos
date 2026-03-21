@@ -123,11 +123,13 @@ export function ApplicationInsights({
           <h3 className="text-sm font-semibold text-foreground">Pipeline flow</h3>
           <span className="text-xs text-muted-foreground">Sankey diagram · click a stage to filter roles</span>
         </div>
-        <ApplicationPipelineChart
-          listings={listings}
-          selectedStage={selectedStage}
-          onStageSelect={onStageSelect}
-        />
+        <div className="min-w-0 overflow-x-auto">
+          <ApplicationPipelineChart
+            listings={listings}
+            selectedStage={selectedStage}
+            onStageSelect={onStageSelect}
+          />
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-sm">

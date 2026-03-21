@@ -12,12 +12,15 @@ interface AppShellProps {
   variant?: AppShellVariant
 }
 
-/** Max-width column + vertical rhythm (same pattern as job boards). */
+/**
+ * Centered content column + vertical rhythm (`gap: var(--app-shell-gap)` in globals.css).
+ * Layout tokens: `--content-max`, `--content-max-wide`, `--app-shell-gap` on `:root` in `app/globals.css`.
+ */
 export function AppShell({ children, className, variant = 'default' }: AppShellProps) {
   return (
     <div
       className={cn(
-        'app-shell',
+        'app-shell min-w-0',
         variant === 'wide' && 'app-shell--wide',
         className
       )}

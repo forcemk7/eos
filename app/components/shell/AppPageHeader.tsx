@@ -29,9 +29,7 @@ export function AppPageHeader({
       <div className="min-w-0 flex-1">
         <Heading
           className={cn(
-            variant === 'page'
-              ? 'm-0 text-2xl font-bold tracking-tight text-foreground'
-              : 'app-section-title'
+            variant === 'page' ? 'eos-title-page' : 'eos-title-section app-section-title'
           )}
         >
           {title}
