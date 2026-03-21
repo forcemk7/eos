@@ -6,6 +6,7 @@ import type { JobSearchAnchor, TargetRoleRow, TargetSectorRow } from '@/lib/jobs
 import type { CandidateReadout } from '@/lib/jobs/candidateReadout'
 import { normalizeTargetKey } from '@/lib/jobs/targetProfileTypes'
 import CandidateReadoutBlock from '@/app/components/CandidateReadoutBlock'
+import { Button } from '@/app/components/ui/button'
 
 interface JobQualificationsRow {
   search_query: string
@@ -175,14 +176,14 @@ export default function TargetProfilePanel({
             query.
           </p>
         </div>
-        <button
+        <Button
           type="button"
-          className="primary-button shrink-0"
+          className="shrink-0"
           onClick={() => void regenerate()}
           disabled={!hasData || generating || loading || patching}
         >
           {generating ? 'Generating…' : qualifications ? 'Regenerate' : 'Generate'}
-        </button>
+        </Button>
       </div>
 
       {!hasData && (
@@ -202,7 +203,7 @@ export default function TargetProfilePanel({
       )}
 
       {hasData && !loading && stale && (
-        <p className="m-0 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90">
+        <p className="m-0 rounded-lg border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
           Your profile changed since these targets were generated. Regenerate to refresh recommendations.
         </p>
       )}

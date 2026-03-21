@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useChat, type UIMessage } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { Button } from '@/app/components/ui/button'
 
 const coverLetterTransport = new DefaultChatTransport({
   api: '/api/cover-letter/chat',
@@ -247,9 +248,10 @@ function CoverLetterChatView({
                     .map((p) => p.text)
                     .join('') || ''}
                 </pre>
-                <button
+                <Button
                   type="button"
-                  className="secondary-button small"
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     const text = msg.parts
                       ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text' && 'text' in p)
@@ -259,7 +261,7 @@ function CoverLetterChatView({
                   }}
                 >
                   Copy
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -329,15 +331,15 @@ function CoverLetterChatView({
             aria-label="Message"
             disabled={sending}
           />
-          <button
+          <Button
             type="button"
-            className="primary-button cover-letter-send"
+            className="cover-letter-send"
             onClick={handleSend}
             disabled={!canSend}
             title="Send (Enter)"
           >
             {sending ? '…' : 'Send'}
-          </button>
+          </Button>
         </div>
       </div>
     </>
@@ -831,12 +833,12 @@ export default function CoverLetterTab() {
               className="cover-letter-rename-input"
             />
             <div className="cover-letter-rename-actions">
-              <button type="button" className="secondary-button" onClick={() => setRenameChatId(null)}>
+              <Button type="button" variant="outline" onClick={() => setRenameChatId(null)}>
                 Cancel
-              </button>
-              <button type="button" className="primary-button" onClick={submitRename}>
+              </Button>
+              <Button type="button" onClick={submitRename}>
                 Save
-              </button>
+              </Button>
             </div>
           </div>
         </div>

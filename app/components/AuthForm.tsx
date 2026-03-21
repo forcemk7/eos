@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AppShell, AppPageHeader } from '@/app/components/shell'
+import { Button } from '@/app/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'signin' | 'signup'
@@ -73,9 +74,9 @@ export default function AuthForm() {
           />
         </div>
         {message && <p className={`auth-message ${message.includes('wrong') || message.includes('Error') ? 'error' : ''}`}>{message}</p>}
-        <button type="submit" className="primary-button" disabled={loading}>
+        <Button type="submit" disabled={loading}>
           {loading ? '…' : mode === 'signin' ? 'Sign in' : 'Sign up'}
-        </button>
+        </Button>
         <button
           type="button"
           className="auth-toggle"

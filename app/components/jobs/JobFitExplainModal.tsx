@@ -69,7 +69,7 @@ function sentimentStyles(s: JobFitFactor['sentiment']) {
     case 'strength':
       return 'border-l-emerald-500 bg-emerald-500/[0.06]'
     case 'gap':
-      return 'border-l-amber-500 bg-amber-500/[0.06]'
+      return 'border-l-warning bg-warning/[0.06]'
     default:
       return 'border-l-border bg-muted/40'
   }

@@ -76,7 +76,7 @@ function NavContent({
             </span>
             {badge > 0 && (
               <span
-                className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center rounded-full bg-amber-500/90 text-[10px] font-semibold text-black shrink-0 self-start mt-0.5"
+                className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center rounded-full bg-warning text-[10px] font-semibold text-warning-foreground shrink-0 self-start mt-0.5"
                 aria-label={`${badge} incomplete`}
               >
                 {badge}

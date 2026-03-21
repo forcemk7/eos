@@ -77,6 +77,8 @@
   --danger: #ef4444;
   --danger-bg: rgba(239, 68, 68, 0.1);
   --content-max: 960px;
+  --eos-shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --eos-shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.15);
   /* App layout tokens — mirror .app-content padding and AppShell gap; cover-letter uses pad-x when main has no padding */
   --content-max-wide: 1200px;
   --app-content-pad-x: 24px;
@@ -316,8 +318,8 @@ html, body {
   margin-left: 6px;
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--bg);
-  background: rgba(251, 191, 36, 0.9);
+  color: hsl(var(--warning-foreground));
+  background: hsl(var(--warning));
   border-radius: 9px;
 }
 
@@ -337,8 +339,8 @@ html, body {
   gap: 12px;
   padding: 10px var(--app-content-pad-x);
   margin-bottom: 16px;
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px dashed rgba(251, 191, 36, 0.4);
+  background: hsl(var(--warning) / 0.08);
+  border: 1px dashed hsl(var(--warning) / 0.4);
   border-radius: var(--radius);
 }
 
@@ -492,6 +494,32 @@ html, body {
 .secondary-button.small {
   padding: 4px 10px;
   font-size: 0.75rem;
+}
+
+.primary-button:focus-visible:not(:disabled),
+.secondary-button:focus-visible:not(:disabled),
+.app-tab:focus-visible,
+.jobs-add-tab:focus-visible,
+.data-tab-btn:focus-visible,
+.cover-letter-top-bar-btn:focus-visible,
+.cover-letter-chat-item:focus-visible,
+.cover-letter-chat-menu-btn:focus-visible,
+.cover-letter-chat-menu-item:focus-visible,
+.cover-letter-lightbox-close:focus-visible,
+.cover-letter-remove-image:focus-visible,
+.cover-letter-drawer-overlay:focus-visible,
+.auth-toggle:focus-visible,
+.dashboard-incomplete-view:focus-visible,
+.links-list-open:focus-visible,
+.links-remove:focus-visible,
+.kanban-card-menu:focus-visible,
+.resume-preview-tab:focus-visible,
+.data-chunk-remove:focus-visible,
+.jobs-filter-chip--removable:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(var(--background)),
+    0 0 0 4px hsl(var(--ring));
 }
 
 /* ── Form inputs ───────────────────────────────────────── */
@@ -654,8 +682,8 @@ textarea::placeholder {
 }
 
 .resume-dropzone.incomplete {
-  border-color: rgba(251, 191, 36, 0.5);
-  background: rgba(251, 191, 36, 0.04);
+  border-color: hsl(var(--warning) / 0.5);
+  background: hsl(var(--warning) / 0.04);
 }
 
 .resume-upload-incomplete-badge {
@@ -1096,7 +1124,7 @@ textarea::placeholder {
   flex-direction: column;
   padding: 16px 12px 16px 0;
   gap: 12px;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--eos-shadow-drawer);
 }
 
 .cover-letter-drawer-search-wrap {
@@ -1231,7 +1259,7 @@ textarea::placeholder {
   background: var(--bg-card);
   border: 1px solid var(--eos-border);
   border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--eos-shadow-popover);
 }
 
 .cover-letter-drawer .cover-letter-chat-menu {
@@ -2253,9 +2281,9 @@ textarea::placeholder {
 .data-chunk-group.incomplete .data-chunk-card,
 .links-panel.incomplete .links-empty,
 .data-chunk-summary.incomplete {
-  border-color: rgba(251, 191, 36, 0.5);
+  border-color: hsl(var(--warning) / 0.5);
   border-style: dashed;
-  background: rgba(251, 191, 36, 0.04);
+  background: hsl(var(--warning) / 0.04);
 }
 .data-chunk-field.incomplete::after {
   content: attr(data-incomplete-hint);
@@ -3379,7 +3407,7 @@ textarea::placeholder {
 
 .prefs-message {
   font-size: 0.85rem;
-  color: #22c55e;
+  color: hsl(var(--success));
 }
 
 .prefs-message.error {
@@ -3429,9 +3457,9 @@ textarea::placeholder {
   margin: 12px 0 0;
   padding: 10px 14px;
   border-radius: var(--radius);
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #22c55e;
+  background: hsl(var(--success) / 0.1);
+  border: 1px solid hsl(var(--success) / 0.3);
+  color: hsl(var(--success));
   font-size: 0.85rem;
 }
 

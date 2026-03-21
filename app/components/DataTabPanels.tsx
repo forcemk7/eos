@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { ResumeData } from '@/lib/profile'
 import { LANGUAGE_LEVELS } from '@/lib/profile'
 import { MISSING_IDS, fieldIncomplete, type IncompleteContext } from '@/lib/profileCompleteness'
+import { Button } from '@/app/components/ui/button'
 
 export interface DataTabHandlers {
   updateIdentity: (field: keyof ResumeData['identity'], value: string) => void
@@ -94,9 +95,9 @@ export function LinksPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }
           onChange={(e) => setNewUrl(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}
         />
-        <button type="button" className="links-add-btn" onClick={handleAdd}>
+        <Button type="button" className="links-add-btn h-10 shrink-0 px-[18px] text-sm font-medium" onClick={handleAdd}>
           Add
-        </button>
+        </Button>
       </div>
       {links.length === 0 ? (
         <p className="links-empty">{linksMissing ? 'Add links (e.g. LinkedIn, portfolio, GitHub).' : 'No links yet. Add your LinkedIn, portfolio, or other URLs above.'}</p>
@@ -140,7 +141,7 @@ export function ExperiencePanel({ data, h, incomplete }: { data: ResumeData; h: 
   return (
     <div className={`data-chunk-group${experienceMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
-        <button type="button" className="secondary-button small" onClick={h.addExperience}>+ Add position</button>
+        <Button type="button" variant="outline" size="sm" onClick={h.addExperience}>+ Add position</Button>
         {experienceMissing && <span className="incomplete-badge">Add experience</span>}
       </div>
       {data.experience.length === 0 && experienceMissing ? (
@@ -162,7 +163,7 @@ export function ExperiencePanel({ data, h, incomplete }: { data: ResumeData; h: 
                 <button type="button" className="data-chunk-remove small" onClick={() => h.removeBullet(i, j)} title="Remove">×</button>
               </div>
             ))}
-            <button type="button" className="secondary-button small data-chunk-add-bullet" onClick={() => h.addBullet(i)}>+ Add bullet</button>
+            <Button type="button" variant="outline" size="sm" className="data-chunk-add-bullet" onClick={() => h.addBullet(i)}>+ Add bullet</Button>
           </div>
         </div>
       ))}
@@ -176,7 +177,7 @@ export function EducationPanel({ data, h }: { data: ResumeData; h: DataTabHandle
   return (
     <div className={`data-chunk-group${educationMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
-        <button type="button" className="secondary-button small" onClick={h.addEducation}>+ Add education</button>
+        <Button type="button" variant="outline" size="sm" onClick={h.addEducation}>+ Add education</Button>
         {educationMissing && <span className="incomplete-badge">Add education</span>}
       </div>
       {list.length === 0 && educationMissing ? (
@@ -203,7 +204,7 @@ export function AchievementsPanel({ data, h }: { data: ResumeData; h: DataTabHan
   return (
     <div className={`data-chunk-group${achievementsMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
-        <button type="button" className="secondary-button small" onClick={h.addAchievement}>+ Add achievement</button>
+        <Button type="button" variant="outline" size="sm" onClick={h.addAchievement}>+ Add achievement</Button>
         {achievementsMissing && <span className="incomplete-badge">Add achievements</span>}
       </div>
       {list.map((a, i) => (
@@ -238,7 +239,7 @@ export function SkillsPanel({ data, h, newSkillName, setNewSkillName }: { data: 
         ))}
         <div className="data-chunk-skill-add">
           <input type="text" value={newSkillName} onChange={(e) => setNewSkillName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), h.addSkill(newSkillName))} placeholder="+ Add skill" className="data-chunk-skill-add-input" />
-          <button type="button" className="secondary-button small" onClick={() => h.addSkill(newSkillName)} disabled={!newSkillName.trim()}>Add</button>
+          <Button type="button" variant="outline" size="sm" onClick={() => h.addSkill(newSkillName)} disabled={!newSkillName.trim()}>Add</Button>
         </div>
       </div>
     </div>
@@ -251,7 +252,7 @@ export function LanguagesPanel({ data, h }: { data: ResumeData; h: DataTabHandle
   return (
     <div className={`data-chunk-group${languagesMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
-        <button type="button" className="secondary-button small" onClick={h.addLanguage}>+ Add language</button>
+        <Button type="button" variant="outline" size="sm" onClick={h.addLanguage}>+ Add language</Button>
         {languagesMissing && <span className="incomplete-badge">Add languages</span>}
       </div>
       {list.map((lang, i) => (
@@ -282,7 +283,7 @@ export function AdditionalPanel({ data, h }: { data: ResumeData; h: DataTabHandl
   return (
     <div className={`data-chunk-group${additionalMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="data-chunk-group-head">
-        <button type="button" className="secondary-button small" onClick={h.addAdditionalSection}>+ Add a section</button>
+        <Button type="button" variant="outline" size="sm" onClick={h.addAdditionalSection}>+ Add a section</Button>
         {additionalMissing && <span className="incomplete-badge">Add section</span>}
       </div>
       <p className="data-section-hint data-additional-hint">Each section has a title and a list of items.</p>
@@ -299,7 +300,7 @@ export function AdditionalPanel({ data, h }: { data: ResumeData; h: DataTabHandl
                 <button type="button" className="data-chunk-remove small" onClick={() => h.removeAdditionalSectionItem(si, ii)} title="Remove">×</button>
               </div>
             ))}
-            <button type="button" className="secondary-button small" onClick={() => h.addAdditionalSectionItem(si)}>+ Add item</button>
+            <Button type="button" variant="outline" size="sm" onClick={() => h.addAdditionalSectionItem(si)}>+ Add item</Button>
           </div>
         </div>
       ))}

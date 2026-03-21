@@ -197,7 +197,7 @@ export function ApplyStatusBadge({ listing }: { listing: DiscoverListingWithAppl
   }
   if (listing.apply_decision === 'later') {
     return (
-      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-400">
+      <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
         Later
       </span>
     )

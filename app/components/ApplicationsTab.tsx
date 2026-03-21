@@ -102,7 +102,7 @@ function eventDotClass(type: string): string {
     case 'imported_external':
       return 'bg-indigo-500 shadow-[0_0_0_3px_rgba(99,102,241,0.25)]'
     case 'pipeline_note':
-      return 'bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.2)]'
+      return 'bg-warning shadow-[0_0_0_3px_hsl(var(--warning)/0.25)]'
     case 'pipeline_stage_change':
       return 'bg-teal-500 shadow-[0_0_0_3px_rgba(20,184,166,0.25)]'
     default:
@@ -410,11 +410,11 @@ function SchemaBanner({ meta }: { meta: ApplicationReportMeta | null }) {
   if (!meta?.suggestDatabaseMigration) return null
   return (
     <div
-      className="flex gap-4 rounded-2xl border border-amber-500/35 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4 shadow-sm"
+      className="flex gap-4 rounded-2xl border border-warning/35 bg-gradient-to-br from-warning/10 via-warning/5 to-transparent p-4 shadow-sm"
       role="status"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20">
-        <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" aria-hidden />
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/20">
+        <AlertTriangle className="h-5 w-5 text-warning" aria-hidden />
       </div>
       <div className="min-w-0 space-y-1">
         <p className="font-semibold text-foreground">Database needs the latest migration</p>

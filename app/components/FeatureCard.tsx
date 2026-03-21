@@ -42,7 +42,7 @@ export function FeatureCard({ icon: Icon, title, description, onClick, badge, cl
             {title}
             {badge != null && badge > 0 && (
               <span
-                className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center rounded-full bg-amber-500/90 text-[10px] font-semibold text-black"
+                className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center rounded-full bg-warning text-[10px] font-semibold text-warning-foreground"
                 aria-label={`${badge} incomplete`}
               >
                 {badge}

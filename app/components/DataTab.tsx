@@ -18,6 +18,7 @@ import {
   type DataTabHandlers,
 } from './DataTabPanels'
 import TargetProfilePanel from './TargetProfilePanel'
+import { Button } from '@/app/components/ui/button'
 
 interface DataTabProps {
   initialData: ResumeData | null
@@ -508,14 +509,14 @@ export default function DataTab({
             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), ingestPastedText())}
             placeholder="Paste text…"
           />
-          <button
+          <Button
             type="button"
-            className="primary-button data-parse-btn"
+            className="data-parse-btn shrink-0 text-[0.9rem] h-9 px-4"
             onClick={ingestPastedText}
             disabled={!pastedText.trim() || !!uploadStatus}
           >
             Parse & add
-          </button>
+          </Button>
         </div>
         {uploadStatus && (
           <p className={uploadError ? 'data-upload-error' : 'data-upload-status'}>{uploadStatus}</p>
@@ -529,9 +530,9 @@ export default function DataTab({
           <h2 className="app-section-title">Your profile</h2>
           {hasData && (
             <div className="data-actions">
-              <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>
+              <Button type="button" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving…' : 'Save'}
-              </button>
+              </Button>
               <span className="data-chunk-count">{totalChunks} pieces</span>
             </div>
           )}

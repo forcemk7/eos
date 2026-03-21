@@ -61,7 +61,7 @@ export default function CandidateReadoutBlock({
       )}
 
       {readoutStale && readout && (
-        <p className="m-0 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90">
+        <p className="m-0 rounded-lg border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
           Your profile changed since this readout was generated. Regenerate your target profile to refresh.
         </p>
       )}

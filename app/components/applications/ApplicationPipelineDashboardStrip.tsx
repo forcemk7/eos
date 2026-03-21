@@ -75,7 +75,7 @@ export function ApplicationPipelineDashboardStrip({
       { key: 'progress', count: progress, className: 'bg-teal-500', label: 'In progress' },
       { key: 'reject', count: reject, className: 'bg-rose-500', label: 'Rejected' },
       { key: 'ghost', count: ghost, className: 'bg-slate-400', label: 'No reply' },
-      { key: 'neutral', count: neutral, className: 'bg-amber-500', label: 'Stage unset' },
+      { key: 'neutral', count: neutral, className: 'bg-warning', label: 'Stage unset' },
     ].filter((p) => p.count > 0)
     const sum = parts.reduce((s, p) => s + p.count, 0) || 1
     return parts.map((p) => ({ ...p, pct: (p.count / sum) * 100 }))

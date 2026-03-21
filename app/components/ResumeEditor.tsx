@@ -13,6 +13,7 @@ import { readoutArchetypeKeySet, readoutTagKeySet } from '@/lib/jobs/candidateRe
 import { normalizeTargetKey } from '@/lib/jobs/targetProfileTypes'
 import { archetypeLabel, type ArchetypeSlug } from '@/lib/jobs/archetypeTaxonomy'
 import CandidateReadoutBlock from '@/app/components/CandidateReadoutBlock'
+import { Button } from '@/app/components/ui/button'
 
 export type { ResumeData }
 
@@ -300,12 +301,12 @@ export default function ResumeEditor({
               <span className="resume-suggestion-new">{s.suggestedValue}</span>
             </div>
             <div className="resume-suggestion-actions">
-              <button type="button" className="primary-button small" onClick={() => handleAcceptSuggestion(s)}>
+              <Button type="button" size="sm" onClick={() => handleAcceptSuggestion(s)}>
                 Accept
-              </button>
-              <button type="button" className="secondary-button small" onClick={() => handleRejectSuggestion(s)}>
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => handleRejectSuggestion(s)}>
                 Reject
-              </button>
+              </Button>
             </div>
           </li>
         ))}
@@ -357,18 +358,18 @@ export default function ResumeEditor({
       <div className="resume-editor-main">
         <div className="resume-editor-header">
           <div className="resume-editor-header-text">
-            <h1 className="app-section-title text-[1.15rem]">Resume</h1>
+            <h1 className="eos-title-section">Resume</h1>
             <p className="app-section-hint mt-1">
               Edit below. Save creates a new version. Switch layout to see the same data in different styles.
             </p>
           </div>
           <div className="resume-editor-actions">
-            <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>
+            <Button type="button" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving…' : 'Save version'}
-            </button>
-            <button type="button" className="secondary-button" onClick={handleExportPdf}>
+            </Button>
+            <Button type="button" variant="outline" onClick={handleExportPdf}>
               Export PDF
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -387,27 +388,24 @@ export default function ResumeEditor({
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
               {tailorSession.url && onOpenJobPosting ? (
-                <button
-                  type="button"
-                  className="secondary-button small"
-                  onClick={() => onOpenJobPosting(tailorSession.url!)}
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenJobPosting(tailorSession.url!)}>
                   Open posting
-                </button>
+                </Button>
               ) : null}
               {onShowListingInBoard ? (
-                <button
+                <Button
                   type="button"
-                  className="secondary-button small"
+                  variant="outline"
+                  size="sm"
                   onClick={() => onShowListingInBoard(sessionToTailoringNav(tailorSession))}
                 >
                   Show in job list
-                </button>
+                </Button>
               ) : null}
               {onDismissTailor ? (
-                <button type="button" className="secondary-button small" onClick={onDismissTailor}>
+                <Button type="button" variant="outline" size="sm" onClick={onDismissTailor}>
                   Dismiss
-                </button>
+                </Button>
               ) : null}
             </div>
           </div>
@@ -422,18 +420,18 @@ export default function ResumeEditor({
                 readout.
               </p>
             </div>
-            <button
+            <Button
               type="button"
-              className="primary-button shrink-0"
+              className="shrink-0"
               disabled={readoutLoading}
               onClick={() => void refreshArtifactReadout()}
             >
               {readoutLoading ? 'Refreshing…' : 'Refresh readout'}
-            </button>
+            </Button>
           </div>
 
           {resumeSourceId !== 'profile' && (
-            <p className="m-0 mt-3 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90">
+            <p className="m-0 mt-3 rounded-lg border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
               You&apos;re editing a restored version that isn&apos;t saved to your profile yet. Save to sync this
               content with Data — until then, recruiters see a different &quot;packet&quot; than what&apos;s stored.
             </p>
@@ -453,7 +451,7 @@ export default function ResumeEditor({
           )}
 
           {readoutDirty && (
-            <p className="m-0 mt-3 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90">
+            <p className="m-0 mt-3 rounded-lg border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning">
               Resume text changed since the last readout. Refresh to update labels.
             </p>
           )}
@@ -577,9 +575,9 @@ export default function ResumeEditor({
             <div className="field-group">
               <div className="field-group-row">
                 <label>Links</label>
-                <button type="button" className="secondary-button small" onClick={() => addLink()}>
+                <Button type="button" variant="outline" size="sm" onClick={() => addLink()}>
                   + Add link
-                </button>
+                </Button>
               </div>
               {(data.links ?? []).map((link, i) => (
                 <div key={i} className="field-group link-row">
@@ -618,9 +616,9 @@ export default function ResumeEditor({
         <section className="resume-section">
           <div className="resume-section-head">
             <h2 className="resume-section-title">Experience</h2>
-            <button type="button" className="secondary-button" onClick={addExperience}>
+            <Button type="button" variant="outline" onClick={addExperience}>
               + Add role
-            </button>
+            </Button>
           </div>
           {data.experience.map((exp, i) => (
             <div key={i} className="resume-exp-block">
@@ -660,9 +658,9 @@ export default function ResumeEditor({
                 rows={3}
                 className="resume-exp-bullets"
               />
-              <button type="button" className="secondary-button small remove-exp" onClick={() => removeExperience(i)}>
+              <Button type="button" variant="outline" size="sm" className="remove-exp" onClick={() => removeExperience(i)}>
                 Remove
-              </button>
+              </Button>
               {!suggestLoading && <InlineSuggestions sectionKey={`experience-${i}`} />}
             </div>
           ))}
@@ -729,22 +727,19 @@ export default function ResumeEditor({
                   </div>
                   <div className="flex flex-col gap-1.5 items-stretch sm:items-end">
                     {canViewListing ? (
-                      <button
-                        type="button"
-                        className="secondary-button small"
-                        onClick={() => onShowListingInBoard!(v.tailoring!)}
-                      >
+                      <Button type="button" variant="outline" size="sm" onClick={() => onShowListingInBoard!(v.tailoring!)}>
                         View listing
-                      </button>
+                      </Button>
                     ) : null}
-                    <button
+                    <Button
                       type="button"
-                      className="secondary-button small"
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleRestore(v.id)}
                       disabled={restoringId === v.id}
                     >
                       {restoringId === v.id ? '…' : 'Restore'}
-                    </button>
+                    </Button>
                   </div>
                 </li>
               )

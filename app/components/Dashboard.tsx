@@ -56,7 +56,7 @@ export function Dashboard({
       />
 
       {totalIncomplete > 0 && onViewIncomplete && (
-        <Card className="border-amber-500/40 bg-amber-500/5">
+        <Card className="border-warning/40 bg-warning/5">
           <CardContent className="flex flex-row items-center justify-between gap-4 py-4">
             <span className="text-sm text-muted-foreground">
               {totalIncomplete} item{totalIncomplete !== 1 ? 's' : ''} to complete

@@ -58,6 +58,7 @@ Legacy `.primary-button` / `.secondary-button` remain for gradual migration; new
 | `--radius` | shadcn base radius (Tailwind `rounded-md` / `rounded-lg` mapping) |
 | `--radius-lg` | Larger panels, cards (`rounded-xl` / `var(--radius-lg)` in TSX) |
 | Tailwind `shadow-eosCard`, `shadow-eosPopover`, `shadow-eosDrawer` | Card hover, menus, drawer — prefer over scattered `rgba` shadows |
+| Legacy `--eos-shadow-popover`, `--eos-shadow-drawer` | Same values as the Tailwind `shadow-eos*` utilities for pure-CSS components |
 
 ## Spacing (app shell)
 

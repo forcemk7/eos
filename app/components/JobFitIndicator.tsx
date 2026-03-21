@@ -23,7 +23,7 @@ export interface JobFitListing {
 
 const LABEL_COLORS: Record<FitLabel, string> = {
   bad: 'text-red-600 dark:text-red-400 [--fit-stroke:theme(colors.red.500)]',
-  okay: 'text-amber-600 dark:text-amber-400 [--fit-stroke:theme(colors.amber.500)]',
+  okay: 'text-warning [--fit-stroke:hsl(var(--warning))]',
   good: 'text-green-600 dark:text-green-400 [--fit-stroke:theme(colors.green.500)]',
   great: 'text-emerald-600 dark:text-emerald-400 [--fit-stroke:theme(colors.emerald.500)]',
 }
