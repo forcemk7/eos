@@ -125,7 +125,7 @@ export function ResultsToolbar({
             disabled={checkFitDisabled}
             onClick={onCheckFitAll}
           >
-            Check fit for all
+            Check fit scores for all
           </Button>
         )}
       </div>

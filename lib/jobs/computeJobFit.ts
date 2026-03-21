@@ -28,7 +28,7 @@ Output only valid JSON, no other text. Use exactly this shape:
 
 - score: 0–100. Realistic bands: 0–30 poor fit, 31–50 stretch/possible, 51–75 solid, 76–100 strong.
 - label: exactly one of "bad", "okay", "good", "great" matching the score bands above.
-- summary: 1–2 sentences: overall fit in plain language, grounded in the profile and posting.
+- summary: at most 2 short sentences; each sentence should carry one clear idea (e.g. main alignment vs main gap). Overall fit in plain language, grounded in the profile and posting—no run-on paragraphs.
 - feedback: same substance as summary (duplicate is fine); kept for older clients.
 - screening_likelihood: exactly one of "qualified", "borderline", "unlikely". This is your estimate of how the candidate might fare in typical first-pass screening given only this profile and posting—not a prediction of hire. Align with score: higher scores → qualified, mid → borderline, low → unlikely.
 - factors: up to 8 objects, each { "category", "sentiment", "detail" }:

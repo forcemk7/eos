@@ -3,14 +3,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { cn } from '@/lib/utils'
-import {
-  STRONG_MATCH_CRITERIA_DESCRIPTION,
-  isStrongMatch,
-  toClientFitResult,
-  type JobFitSuccessResponse,
-} from '@/lib/jobsFit'
+import { STRONG_MATCH_CRITERIA_BULLETS, isStrongMatch, toClientFitResult, type JobFitSuccessResponse } from '@/lib/jobsFit'
+import { splitIntoSentences } from '@/lib/utils'
 import { JobFitExplainModal } from '@/app/components/jobs/JobFitExplainModal'
 import type { DiscoverListingWithApply } from '@/app/components/jobs/types'
 
@@ -280,9 +276,11 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onStartTailorResume }: Str
                 <Sparkles className="h-4 w-4 shrink-0 text-accent" aria-hidden />
                 Find a strong match
               </CardTitle>
-              <CardDescription className="jobs-section-hint mt-1 text-xs sm:text-sm">
-                {STRONG_MATCH_CRITERIA_DESCRIPTION}
-              </CardDescription>
+              <ul className="jobs-section-hint m-0 mt-1 list-disc space-y-1 pl-4 text-xs sm:text-sm text-muted-foreground">
+                {STRONG_MATCH_CRITERIA_BULLETS.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
             </div>
             <Button
               type="button"
@@ -436,7 +434,7 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onStartTailorResume }: Str
                               {sp.remote ? ' · remote' : ''}
                             </span>
                             {best != null && (
-                              <span className="tabular-nums text-muted-foreground">best {best}%</span>
+                              <span className="tabular-nums text-muted-foreground">best fit score {best}%</span>
                             )}
                             {strongN > 0 && (
                               <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-400">
@@ -447,15 +445,30 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onStartTailorResume }: Str
                           {open && (
                             <div className="ml-6 mt-2 space-y-2 border-l border-border pl-3">
                               {it.suggested_next && typeof it.suggested_next === 'object' && (
-                                <p className="text-xs text-muted-foreground">
-                                  Next suggested:{' '}
-                                  <span className="text-foreground">
-                                    {(it.suggested_next as { q?: string }).q} · p
-                                    {(it.suggested_next as { page?: number }).page ?? 1}
-                                  </span>
-                                  {' — '}
-                                  {(it.suggested_next as { rationale?: string }).rationale}
-                                </p>
+                                <div className="text-xs text-muted-foreground">
+                                  <p className="m-0">
+                                    Next suggested:{' '}
+                                    <span className="text-foreground">
+                                      {(it.suggested_next as { q?: string }).q} · p
+                                      {(it.suggested_next as { page?: number }).page ?? 1}
+                                    </span>
+                                  </p>
+                                  {(() => {
+                                    const rationale = (it.suggested_next as { rationale?: string }).rationale
+                                    if (!rationale?.trim()) return null
+                                    const sentences = splitIntoSentences(rationale)
+                                    if (sentences.length <= 1) {
+                                      return <p className="m-0 mt-1 leading-relaxed">{rationale}</p>
+                                    }
+                                    return (
+                                      <ul className="m-0 mt-1 list-disc space-y-0.5 pl-4 leading-relaxed">
+                                        {sentences.map((s, si) => (
+                                          <li key={si}>{s}</li>
+                                        ))}
+                                      </ul>
+                                    )
+                                  })()}
+                                </div>
                               )}
                               <ul className="space-y-2">
                                 {evals.map((row, idx) => {
@@ -502,6 +515,7 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onStartTailorResume }: Str
                                             variant="outline"
                                             size="sm"
                                             className="h-7 text-xs"
+                                            aria-label={`Why this fit score for ${r.title ?? 'job'} at ${r.company ?? ''}`}
                                             onClick={() =>
                                               openExplain(r.fit!, r.title ?? '', r.company ?? '', listing)
                                             }
@@ -594,7 +608,7 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onStartTailorResume }: Str
                             {String(sp.remote)} · p{String(sp.page ?? 1)}
                           </p>
                           <p className="mt-2 tabular-nums">
-                            Best score: {bestScoreFromEvals(it.evaluations) ?? '—'}%
+                            Best fit score: {bestScoreFromEvals(it.evaluations) ?? '—'}%
                           </p>
                           <p>Strong matches: {strongCountFromEvals(it.evaluations)}</p>
                         </div>

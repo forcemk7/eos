@@ -123,7 +123,7 @@ export function JobDetailContent({
       {headerInner}
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <div className="mb-6 flex items-center gap-3">
-          <span className="text-sm font-medium text-muted-foreground">Fit</span>
+          <span className="text-sm font-medium text-muted-foreground">Fit score</span>
           <JobFitIndicator
             listing={job}
             triggerCheck={checkAllTrigger}

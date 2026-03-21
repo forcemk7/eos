@@ -5,6 +5,9 @@ import type { ResumeData } from '@/lib/profile'
 import type { CandidateReadoutTag } from '@/lib/jobs/candidateReadout'
 import { archetypeLabel, type ArchetypeSlug } from '@/lib/jobs/archetypeTaxonomy'
 import { evidencePathToLabel } from '@/lib/readoutEvidenceLabels'
+import { splitIntoSentences } from '@/lib/utils'
+
+const RATIONALE_BULLET_MIN_LEN = 200
 
 export type ReadoutDisplayModel = {
   generated_at: string
@@ -93,21 +96,41 @@ export default function CandidateReadoutBlock({
 
           {readout.tags.length > 0 && (
             <ul className="m-0 list-none space-y-3 p-0">
-              {readout.tags.map((t) => (
-                <li key={t.id} className="rounded-lg border border-border/80 bg-card/30 px-3 py-2.5 text-sm">
-                  <div className="font-medium text-foreground">{t.label}</div>
-                  <p className="mt-1 m-0 leading-relaxed text-muted-foreground">{t.rationale}</p>
-                  <p className="mt-1.5 m-0 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground/80">Evidence: </span>
-                    {t.evidence_paths.map((p, i) => (
-                      <span key={p + i}>
-                        {i > 0 ? ' · ' : ''}
-                        {evidencePathToLabel(p, profileData ?? undefined)}
-                      </span>
-                    ))}
-                  </p>
-                </li>
-              ))}
+              {readout.tags.map((t) => {
+                const rationaleSentences = splitIntoSentences(t.rationale)
+                const rationaleAsBullets =
+                  rationaleSentences.length > 1 || t.rationale.length >= RATIONALE_BULLET_MIN_LEN
+                return (
+                  <li key={t.id} className="rounded-lg border border-border/80 bg-card/30 px-3 py-2.5 text-sm">
+                    <div className="font-medium text-foreground">{t.label}</div>
+                    {rationaleAsBullets ? (
+                      <ul className="m-0 mt-1 list-disc space-y-1 pl-4 leading-relaxed text-muted-foreground">
+                        {(rationaleSentences.length > 0 ? rationaleSentences : [t.rationale]).map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 m-0 leading-relaxed text-muted-foreground">{t.rationale}</p>
+                    )}
+                    <div className="mt-1.5 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground/80">Evidence</span>
+                      {t.evidence_paths.length > 1 ? (
+                        <ul className="m-0 mt-1 list-disc space-y-0.5 pl-4">
+                          {t.evidence_paths.map((p) => (
+                            <li key={p}>{evidencePathToLabel(p, profileData ?? undefined)}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="m-0 mt-1">
+                          {t.evidence_paths[0]
+                            ? evidencePathToLabel(t.evidence_paths[0], profileData ?? undefined)
+                            : '—'}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           )}
 

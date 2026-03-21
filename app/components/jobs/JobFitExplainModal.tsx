@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, splitIntoSentences } from '@/lib/utils'
 import type {
   FitLabel,
   JobFitClientResult,
@@ -18,20 +18,12 @@ import type {
   ScreeningLikelihood,
 } from '@/lib/jobsFit'
 
-const ATS_CONTEXT = (
-  <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
-    <p className="m-0 font-medium text-foreground">How screening often works</p>
-    <p className="m-0">
-      Employers use different tools and workflows. Many applicant systems parse your resume into fields
-      (titles, dates, skills). Keyword or rule-based filters are common before a recruiter reads
-      anyone in depth.
-    </p>
-    <p className="m-0">
-      Recruiters usually scan for role level, must-have tools or domains, and evidence in recent work.
-      “Nice-to-haves” matter less early on. Nothing here guarantees how a specific company scores you.
-    </p>
-  </div>
-)
+const ATS_BULLETS = [
+  'Employers use different tools. Many systems parse your resume into fields (titles, dates, skills).',
+  'Keyword or rule-based filters are common before anyone is read in depth.',
+  'Recruiters often scan for role level, must-have tools or domains, and evidence in recent work—nice-to-haves matter less early on.',
+  'Nothing here guarantees how a specific company scores you.',
+]
 
 const LABEL_COPY: Record<FitLabel, string> = {
   bad: 'Poor fit',
@@ -75,6 +67,20 @@ function sentimentStyles(s: JobFitFactor['sentiment']) {
   }
 }
 
+function SummaryBlock({ text }: { text: string }) {
+  const sentences = splitIntoSentences(text)
+  if (sentences.length <= 1) {
+    return <p className="m-0 text-sm leading-relaxed text-foreground">{text}</p>
+  }
+  return (
+    <ul className="m-0 list-disc space-y-1 pl-5 text-sm leading-relaxed text-foreground">
+      {sentences.map((s, i) => (
+        <li key={i}>{s}</li>
+      ))}
+    </ul>
+  )
+}
+
 export interface JobFitExplainModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -96,6 +102,7 @@ export function JobFitExplainModal({
 }: JobFitExplainModalProps) {
   const screening = SCREENING_COPY[fit.screening_likelihood]
   const roleLine = [jobTitle, jobCompany].filter(Boolean).join(' · ')
+  const screeningHintParts = splitIntoSentences(screening.hint)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,30 +113,61 @@ export function JobFitExplainModal({
         )}
       >
         <DialogHeader className="shrink-0 space-y-1 border-b border-border px-6 py-4 text-left">
-          <DialogTitle className="text-left text-base leading-snug sm:text-lg">
-            How ATS &amp; recruiters may read you
-          </DialogTitle>
+          <DialogTitle className="text-left text-base leading-snug sm:text-lg">Why this fit score</DialogTitle>
           <DialogDescription className={roleLine ? 'text-left text-xs sm:text-sm' : 'sr-only'}>
-            {roleLine || 'Fit explanation for this job listing.'}
+            {roleLine || 'Fit score explanation for this job listing.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <section className="mb-6 rounded-lg border border-border/80 bg-muted/30 p-4">{ATS_CONTEXT}</section>
+          <section className="mb-6 rounded-lg border border-border/80 bg-muted/30 p-4">
+            <details className="group text-sm">
+              <summary className="cursor-pointer list-none font-medium text-foreground [&::-webkit-details-marker]:hidden">
+                <span className="underline-offset-2 group-open:underline">How first-pass screening often works</span>
+              </summary>
+              <div className="mt-3 space-y-2 text-muted-foreground">
+                <p className="m-0 text-xs leading-relaxed">
+                  Context only—your fit score is still computed from your saved profile and this posting.
+                </p>
+                <ul className="m-0 list-disc space-y-1.5 pl-4 leading-relaxed">
+                  {ATS_BULLETS.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          </section>
 
-          <section className="mb-6 space-y-2">
-            <h3 className="m-0 text-sm font-semibold text-foreground">Your match</h3>
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="text-2xl font-semibold tabular-nums text-foreground">{fit.score}%</span>
-              <span className="text-sm text-muted-foreground">{LABEL_COPY[fit.label]}</span>
+          <section className="mb-6 space-y-3">
+            <h3 className="m-0 text-sm font-semibold text-foreground">Fit score &amp; band</h3>
+            <div className="flex flex-wrap gap-6">
+              <div>
+                <p className="m-0 text-xs font-medium text-muted-foreground">Fit score</p>
+                <p className="m-0 text-2xl font-semibold tabular-nums text-foreground">{fit.score}%</p>
+              </div>
+              <div>
+                <p className="m-0 text-xs font-medium text-muted-foreground">Fit band</p>
+                <p className="m-0 text-sm text-foreground">{LABEL_COPY[fit.label]}</p>
+              </div>
             </div>
-            <p className="m-0 text-sm leading-relaxed text-foreground">{fit.summary}</p>
+            <SummaryBlock text={fit.summary} />
             <p className="m-0 text-xs text-muted-foreground">
               Estimate only, from your saved profile and this posting—not a prediction of outcome.
             </p>
             <div className="rounded-md border border-border bg-card px-3 py-2.5">
-              <p className="m-0 text-sm font-medium text-foreground">{screening.title}</p>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{screening.hint}</p>
+              <h4 className="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                First-pass estimate
+              </h4>
+              <p className="m-0 mt-1 text-sm font-medium text-foreground">{screening.title}</p>
+              {screeningHintParts.length <= 1 ? (
+                <p className="m-0 mt-1 text-sm leading-relaxed text-muted-foreground">{screening.hint}</p>
+              ) : (
+                <ul className="m-0 mt-1 list-disc space-y-1 pl-4 text-sm leading-relaxed text-muted-foreground">
+                  {screeningHintParts.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </section>
 
@@ -151,7 +189,7 @@ export function JobFitExplainModal({
 
           {fit.factors.length > 0 && (
             <section className="mb-6">
-              <h3 className="mb-2 text-sm font-semibold text-foreground">Factor breakdown</h3>
+              <h3 className="mb-2 text-sm font-semibold text-foreground">What drives this score</h3>
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {fit.factors.map((f, i) => (
                   <li
@@ -161,8 +199,10 @@ export function JobFitExplainModal({
                       sentimentStyles(f.sentiment)
                     )}
                   >
-                    <span className="font-medium text-foreground">{CATEGORY_LABEL[f.category]}.</span>{' '}
-                    <span className="text-muted-foreground">{f.detail}</span>
+                    <p className="m-0 text-xs font-semibold uppercase tracking-wide text-foreground">
+                      {CATEGORY_LABEL[f.category]}
+                    </p>
+                    <p className="m-0 mt-1 text-muted-foreground">{f.detail}</p>
                   </li>
                 ))}
               </ul>

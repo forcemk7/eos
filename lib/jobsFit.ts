@@ -44,9 +44,17 @@ export const STRONG_MATCH_CRITERIA = {
   screening_likelihood: 'qualified' as const,
 }
 
-/** One-line copy for tooltips / panel intros. */
+/** One-line copy for tooltips / API prompts (kept for match-loop orchestration). */
 export const STRONG_MATCH_CRITERIA_DESCRIPTION =
   'Strong match = score in the strong band (76+), label “great”, and screening estimate “qualified” — open “Why” for factors and detail.'
+
+/** Skimmable UI copy; values track {@link STRONG_MATCH_CRITERIA}. */
+export const STRONG_MATCH_CRITERIA_BULLETS: string[] = [
+  `Fit score is ${STRONG_MATCH_CRITERIA.minScore}% or higher.`,
+  'Fit band is “Strong fit” (top band).',
+  'First-pass screening estimate is “Qualified.”',
+  'All three must be true at once. Open “Why this fit score” on a listing for the full breakdown.',
+]
 
 export interface StrongMatchCriteriaOptions {
   minScore?: number

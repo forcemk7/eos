@@ -79,3 +79,30 @@ export const workflowGuideStrip = {
     'Workflow: Profile → Resume → Job Board or Recommended Jobs → tailor in Resume → Cover Letter → Applications.',
   dismiss: 'Dismiss',
 } as const
+
+/** Auth screen + one-time post–sign-in dashboard cue */
+export const authCopy = {
+  freshSignInStorageKey: 'earnOS_fresh_sign_in',
+  signIn: {
+    title: 'Sign in',
+    description: 'Resume and job search in one workspace. After you sign in, you’ll land on your dashboard with a clear setup path.',
+  },
+  signUp: {
+    title: 'Create account',
+    description: 'Same workspace as sign-in—profile, resume, listings you save, and application tracking. Start from the dashboard and follow the workflow bar.',
+  },
+  scopeHeading: 'What stays in eOS',
+  scopeItems: [
+    'Profile fields, resume versions, and jobs you save or track',
+    'Application pipeline and history tied to your account',
+    'Attachments you add for cover letters or off-platform flows (private storage)',
+  ],
+  privacyOneLiner:
+    'Your data is scoped to your account. AI-assisted features (job fit, cover letter, recommendations) only send relevant text when you run them—not in the background.',
+  signupCheckEmail: 'Check your email to confirm your account, then sign in.',
+  dashboardWelcome: {
+    title: 'You’re in',
+    body: 'Your dashboard is home base. Use the workflow bar at the top to set up Profile and Resume, then explore jobs, tailoring, and applications.',
+    dismiss: 'Got it',
+  },
+} as const

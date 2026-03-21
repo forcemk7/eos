@@ -54,8 +54,8 @@ function CircularScore({
         colorClass
       )}
       onClick={onClick}
-      title="How ATS and recruiters may read you — open details"
-      aria-label={`Fit ${clamped} percent — open how you may be read for this job`}
+      title="Why this fit score — open details"
+      aria-label={`Fit score ${clamped} percent — open why this fit score for this job`}
     >
       <svg width={SIZE} height={SIZE} className="-rotate-90" aria-hidden>
         <circle
@@ -180,7 +180,7 @@ export function JobFitIndicator({
           size="icon"
           className="h-9 w-9"
           onClick={runFit}
-          title={error ?? 'Retry fit check'}
+          title={error ?? 'Retry fit score check'}
         >
           <Gauge className="h-4 w-4" />
         </Button>
@@ -201,8 +201,8 @@ export function JobFitIndicator({
       className={cn('h-9 w-9 flex-shrink-0', className)}
       onClick={runFit}
       disabled={state === 'loading'}
-      title="Check fit"
-      aria-label="How qualified am I for this job?"
+      title="Check fit score"
+      aria-label="Run fit score check for this job"
     >
       {state === 'loading' ? (
         <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
