@@ -2,11 +2,10 @@
 
 import { Menu } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { navItemCopy } from '@/lib/navCopy'
-import type { Tab } from '@/app/components/AppSidebar'
+import { navItemCopy, type NavTabKey } from '@/lib/navCopy'
 
 interface AppTopBarProps {
-  currentTab: Tab
+  currentTab: NavTabKey
   onMenuClick: () => void
 }
 
