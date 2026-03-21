@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useChat, type UIMessage } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { Button } from '@/app/components/ui/button'
+import { exportCoverLetterToPdf } from '@/lib/exportCoverLetterPdf'
 
 const coverLetterTransport = new DefaultChatTransport({
   api: '/api/cover-letter/chat',
@@ -118,17 +119,33 @@ interface PendingImage {
   previewUrl: string
 }
 
+function latestAssistantPlainText(messages: UIMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role !== 'assistant') continue
+    const parts = messages[i].parts ?? []
+    const t = parts
+      .filter((p): p is { type: 'text'; text: string } => p.type === 'text' && 'text' in p)
+      .map((p) => p.text)
+      .join('')
+      .trim()
+    if (t) return t
+  }
+  return null
+}
+
 /** Renders the chat thread and input; only mounted when we have a chat id and loaded messages. */
 function CoverLetterChatView({
   chatId,
   initialMessages,
   onError,
   onClearError,
+  onLatestAssistantText,
 }: {
   chatId: string
   initialMessages: UIMessage[]
   onError: (msg: string) => void
   onClearError: () => void
+  onLatestAssistantText?: (text: string | null) => void
 }) {
   const { messages, sendMessage, status, error: chatError, clearError } = useChat({
     id: chatId,
@@ -152,6 +169,10 @@ function CoverLetterChatView({
   useEffect(() => {
     if (lightboxUrl) lightboxRef.current?.focus()
   }, [lightboxUrl])
+
+  useEffect(() => {
+    onLatestAssistantText?.(latestAssistantPlainText(messages))
+  }, [messages, onLatestAssistantText])
 
   const sending = status === 'submitted' || status === 'streaming'
 
@@ -407,6 +428,15 @@ export default function CoverLetterTab() {
   const sessionInitialized = useRef(false)
   const [savedJobs, setSavedJobs] = useState<Array<{ id: string; title: string; company: string }>>([])
   const [jobLinkForNewChat, setJobLinkForNewChat] = useState('')
+  const [latestAssistantDraft, setLatestAssistantDraft] = useState<string | null>(null)
+
+  const onLatestAssistantText = useCallback((text: string | null) => {
+    setLatestAssistantDraft(text)
+  }, [])
+
+  useEffect(() => {
+    if (!currentChatId || loadedMessages === null) setLatestAssistantDraft(null)
+  }, [currentChatId, loadedMessages])
 
   const filteredChats = historySearch.trim()
     ? chats.filter((c) => (c.title ?? 'Untitled').toLowerCase().includes(historySearch.trim().toLowerCase()))
@@ -662,6 +692,13 @@ export default function CoverLetterTab() {
     setMenuChatId(null)
   }
 
+  function handleExportCoverPdf() {
+    const text = latestAssistantDraft?.trim()
+    if (!text) return
+    const safe = new Date().toISOString().slice(0, 10)
+    exportCoverLetterToPdf(text, `cover-letter-${safe}.pdf`)
+  }
+
   return (
     <div ref={fullscreenRef} className="cover-letter-tab cover-letter-chat-layout">
       <header className="cover-letter-top-bar">
@@ -680,11 +717,21 @@ export default function CoverLetterTab() {
           <button
             type="button"
             className="cover-letter-top-bar-btn cover-letter-top-bar-btn-text"
+            disabled={!latestAssistantDraft?.trim()}
+            onClick={handleExportCoverPdf}
+            title={latestAssistantDraft?.trim() ? 'Download latest draft as PDF' : 'No assistant draft yet'}
+            aria-label="Export cover letter PDF"
+          >
+            <span>Export PDF</span>
+          </button>
+          <button
+            type="button"
+            className="cover-letter-top-bar-btn cover-letter-top-bar-btn-text"
             onClick={() => setHistoryDrawerOpen(true)}
             aria-label="History"
           >
             <IconHistory />
-            <span>History</span>
+            <span className="cover-letter-top-bar-btn-label">History</span>
           </button>
           <button
             type="button"
@@ -696,7 +743,7 @@ export default function CoverLetterTab() {
             aria-label="New chat"
           >
             <IconNewChat />
-            <span>New chat</span>
+            <span className="cover-letter-top-bar-btn-label">New chat</span>
           </button>
         </div>
       </header>
@@ -865,6 +912,7 @@ export default function CoverLetterTab() {
               initialMessages={loadedMessages}
               onError={setError}
               onClearError={() => setError(null)}
+              onLatestAssistantText={onLatestAssistantText}
             />
           </>
         )}

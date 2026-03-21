@@ -1053,6 +1053,12 @@ textarea::placeholder {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.cover-letter-top-bar-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .cover-letter-top-bar-btn-text {
   width: auto;
   padding: 0 12px;
@@ -2728,6 +2734,11 @@ textarea::placeholder {
   margin-bottom: 4px;
 }
 
+.resume-editor-layout--narrow .resume-editor-aside .resume-versions {
+  position: static;
+  top: auto;
+}
+
 .resume-editor-main {
   min-width: 0;
   display: flex;
@@ -3777,7 +3788,8 @@ textarea::placeholder {
     padding: 10px 16px 12px;
   }
 
-  .cover-letter-top-bar-btn-text span {
+  /* Keep icon+text buttons compact; label-only buttons (e.g. Export PDF) stay visible */
+  .cover-letter-top-bar-btn-text .cover-letter-top-bar-btn-label {
     display: none;
   }
 
