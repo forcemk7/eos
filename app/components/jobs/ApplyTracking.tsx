@@ -25,7 +25,7 @@ type PendingPayload = {
   sawBlurOrHidden: boolean
 }
 
-function listingToSyncBody(l: DiscoverListingWithApply) {
+export function listingToSyncBody(l: DiscoverListingWithApply) {
   return {
     external_id: l.external_id,
     source: l.source,

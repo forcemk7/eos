@@ -76,10 +76,10 @@ function strongCountFromEvals(evals: unknown): number {
 
 export interface StrongMatchLoopPanelProps {
   onOpenDataTab?: () => void
-  onOpenResumeTab?: () => void
+  onStartTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
-export function StrongMatchLoopPanel({ onOpenDataTab, onOpenResumeTab }: StrongMatchLoopPanelProps) {
+export function StrongMatchLoopPanel({ onOpenDataTab, onStartTailorResume }: StrongMatchLoopPanelProps) {
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [iterations, setIterations] = useState<LoopIterationRow[]>([])
@@ -105,6 +105,7 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onOpenResumeTab }: StrongM
   const [explainFit, setExplainFit] = useState<ReturnType<typeof toClientFitResult> | null>(null)
   const [explainTitle, setExplainTitle] = useState('')
   const [explainCompany, setExplainCompany] = useState('')
+  const [explainListing, setExplainListing] = useState<DiscoverListingWithApply | null>(null)
 
   const loadSessions = useCallback(async () => {
     setLoadingSessions(true)
@@ -247,10 +248,16 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onOpenResumeTab }: StrongM
     }
   }
 
-  function openExplain(fit: JobFitSuccessResponse, title: string, company: string) {
+  function openExplain(
+    fit: JobFitSuccessResponse,
+    title: string,
+    company: string,
+    listing?: DiscoverListingWithApply | null
+  ) {
     setExplainFit(toClientFitResult({ ...fit, success: true } as JobFitSuccessResponse))
     setExplainTitle(title)
     setExplainCompany(company)
+    setExplainListing(listing ?? null)
     setExplainOpen(true)
   }
 
@@ -496,7 +503,7 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onOpenResumeTab }: StrongM
                                             size="sm"
                                             className="h-7 text-xs"
                                             onClick={() =>
-                                              openExplain(r.fit!, r.title ?? '', r.company ?? '')
+                                              openExplain(r.fit!, r.title ?? '', r.company ?? '', listing)
                                             }
                                           >
                                             Why
@@ -512,16 +519,13 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onOpenResumeTab }: StrongM
                                               >
                                                 Save &amp; track
                                               </Button>
-                                              {onOpenResumeTab && (
+                                              {onStartTailorResume && listing && (
                                                 <Button
                                                   type="button"
                                                   variant="ghost"
                                                   size="sm"
                                                   className="h-7 text-xs"
-                                                  onClick={() => {
-                                                    setExplainOpen(false)
-                                                    onOpenResumeTab()
-                                                  }}
+                                                  onClick={() => void onStartTailorResume(listing)}
                                                 >
                                                   Tailor resume
                                                 </Button>
@@ -612,7 +616,14 @@ export function StrongMatchLoopPanel({ onOpenDataTab, onOpenResumeTab }: StrongM
           jobCompany={explainCompany}
           fit={explainFit}
           onOpenDataTab={onOpenDataTab}
-          onTailorToJob={onOpenResumeTab}
+          onTailorToJob={
+            explainListing && onStartTailorResume
+              ? () => {
+                  setExplainOpen(false)
+                  void onStartTailorResume(explainListing)
+                }
+              : undefined
+          }
         />
       )}
     </>

@@ -17,6 +17,11 @@ interface JobBoardSplitProps {
   checkAllTrigger?: number
   onPatchListing: (stable_external_id: string, patch: Partial<DiscoverListingWithApply>) => void
   onOpenDataTab?: () => void
+  /** When user returns from Resume to highlight a listing; cleared via onFocusConsumed after apply. */
+  focusStableExternalId?: string | null
+  onFocusConsumed?: () => void
+  listingsLoading?: boolean
+  onTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
 export function JobBoardSplit({
@@ -26,11 +31,22 @@ export function JobBoardSplit({
   checkAllTrigger,
   onPatchListing,
   onOpenDataTab,
+  focusStableExternalId,
+  onFocusConsumed,
+  listingsLoading,
+  onTailorResume,
 }: JobBoardSplitProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const [selected, setSelected] = useState<DiscoverListingWithApply | null>(null)
 
   const sorted = useMemo(() => sortListings(listings, sort) as DiscoverListingWithApply[], [listings, sort])
+
+  useEffect(() => {
+    if (!focusStableExternalId || !onFocusConsumed || listingsLoading) return
+    const match = sorted.find((j) => j.stable_external_id === focusStableExternalId)
+    if (match) setSelected(match)
+    onFocusConsumed()
+  }, [focusStableExternalId, sorted, listingsLoading, onFocusConsumed])
 
   useEffect(() => {
     if (!selected) return
@@ -59,6 +75,7 @@ export function JobBoardSplit({
               compact={compact}
               onPatchListing={onPatchListing}
               onOpenDataTab={onOpenDataTab}
+              onTailorResume={onTailorResume}
             />
           ))}
         </ul>
@@ -71,6 +88,8 @@ export function JobBoardSplit({
             onClose={() => setSelected(null)}
             checkAllTrigger={checkAllTrigger}
             onPatchListing={onPatchListing}
+            onOpenDataTab={onOpenDataTab}
+            onTailorResume={onTailorResume}
           />
         </div>
       )}

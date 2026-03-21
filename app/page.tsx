@@ -15,12 +15,22 @@ import { AppSidebar, type Tab } from './components/AppSidebar'
 import { AppTopBar } from './components/AppTopBar'
 import { Dashboard } from './components/Dashboard'
 import { AppShell, AppLoadingBlock } from './components/shell'
+import { listingToSyncBody } from './components/jobs/ApplyTracking'
+import { stableExternalId } from '@/lib/jobs/stableExternalId'
+import { jdTextFromListing, type DiscoverListingWithApply } from '@/lib/jobs/discoverListing'
+import type { JobListingRow } from '@/lib/jobs/jobListingRow'
+import type {
+  JobsBoardTab,
+  ResumeVersionTailoring,
+  TailorResumeSession,
+} from '@/lib/resumeTailoring'
 
 interface ResumeVersion {
   id: string
   created_at: string
   file_name?: string
   parsed_data?: ResumeData
+  tailoring?: ResumeVersionTailoring | null
 }
 
 export default function Home() {
@@ -32,6 +42,11 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>('dashboard')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [dataIncompleteCount, setDataIncompleteCount] = useState(0)
+  const [tailorSession, setTailorSession] = useState<TailorResumeSession | null>(null)
+  const [focusListingRequest, setFocusListingRequest] = useState<{
+    stable_external_id: string
+    tab: JobsBoardTab
+  } | null>(null)
   const userIdRef = useRef<string | null>(null)
 
   const handleNavigate = useCallback((t: Tab) => {
@@ -94,20 +109,91 @@ export default function Home() {
     else setCurrent(null)
   }, [user, loadResume])
 
+  const consumeFocusListing = useCallback(() => setFocusListingRequest(null), [])
+
+  const startTailorFromListing = useCallback(
+    async (job: DiscoverListingWithApply, sourceTab: JobsBoardTab) => {
+      let listingId = job.listing_id
+      let stable = job.stable_external_id
+      if (!listingId) {
+        try {
+          const res = await fetch('/api/jobs/sync-discover', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(listingToSyncBody(job)),
+          })
+          const data = await res.json()
+          if (res.ok && data.success && data.listing?.id) {
+            const row = data.listing as JobListingRow
+            listingId = row.id
+            stable = stableExternalId({
+              external_id: row.external_id,
+              source: row.source,
+              title: row.title,
+              company: row.company,
+              url: row.url,
+            })
+          }
+        } catch {
+          // keep listingId null; save can still store JD + denormalized fields
+        }
+      }
+      setTailorSession({
+        sourceTab,
+        stable_external_id: stable,
+        listing_id: listingId,
+        title: job.title,
+        company: job.company,
+        url: job.url,
+        jdText: jdTextFromListing(job),
+      })
+      handleNavigate('resume')
+    },
+    [handleNavigate]
+  )
+
+  const openListingFromTailoring = useCallback(
+    (t: ResumeVersionTailoring) => {
+      if (t.stable_external_id) {
+        setFocusListingRequest({ stable_external_id: t.stable_external_id, tab: t.source_tab ?? 'jobs' })
+        handleNavigate((t.source_tab ?? 'jobs') as Tab)
+        return
+      }
+      if (t.url) window.open(t.url, '_blank', 'noopener,noreferrer')
+    },
+    [handleNavigate]
+  )
+
   const handleSave = useCallback(
     async (parsed: ResumeData) => {
+      const attachTailoring =
+        tab === 'resume' &&
+        tailorSession &&
+        (Boolean(tailorSession.listing_id) || Boolean(tailorSession.jdText.trim()))
+      const tailoring = attachTailoring
+        ? {
+            job_listing_id: tailorSession.listing_id,
+            jd_snapshot: tailorSession.jdText,
+            title: tailorSession.title,
+            company: tailorSession.company,
+            url: tailorSession.url,
+            source_tab: tailorSession.sourceTab,
+          }
+        : undefined
       const res = await fetch('/api/resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parsed }),
+        body: JSON.stringify({ parsed, ...(tailoring ? { tailoring } : {}) }),
         credentials: 'include',
       })
       const data = await res.json()
       if (res.status === 401) setUser(null)
       if (!res.ok || !data.success) throw new Error(data.error || 'Save failed')
+      if (attachTailoring) setTailorSession(null)
       await loadResume()
     },
-    [loadResume]
+    [loadResume, tab, tailorSession]
   )
 
   const handleRestore = useCallback(async (versionId: string) => {
@@ -136,8 +222,6 @@ export default function Home() {
     await supabase.auth.signOut()
     window.location.reload()
   }
-
-  const resumeData = current?.parsed_data || null
 
   if (authLoading) {
     return (
@@ -215,11 +299,22 @@ export default function Home() {
                 onCompletenessChange={setDataIncompleteCount}
               />
             ) : tab === 'jobs' ? (
-              <JobsTab onOpenDataTab={() => handleNavigate('data')} />
+              <JobsTab
+                onOpenDataTab={() => handleNavigate('data')}
+                focusStableExternalId={
+                  focusListingRequest?.tab === 'jobs' ? focusListingRequest.stable_external_id : null
+                }
+                onFocusListingConsumed={consumeFocusListing}
+                onStartTailorResume={(job) => void startTailorFromListing(job, 'jobs')}
+              />
             ) : tab === 'ai-jobs' ? (
               <AIJobsTab
                 onOpenDataTab={() => handleNavigate('data')}
-                onOpenResumeTab={() => handleNavigate('resume')}
+                focusStableExternalId={
+                  focusListingRequest?.tab === 'ai-jobs' ? focusListingRequest.stable_external_id : null
+                }
+                onFocusListingConsumed={consumeFocusListing}
+                onStartTailorResume={(job) => void startTailorFromListing(job, 'ai-jobs')}
               />
             ) : tab === 'applications' ? (
               <ApplicationsTab onBrowseJobs={() => setTab('jobs')} onBrowseRecommended={() => setTab('ai-jobs')} />
@@ -234,6 +329,10 @@ export default function Home() {
                   versions={versions}
                   onSave={(data) => handleSave(data)}
                   onRestore={handleRestore}
+                  tailorSession={tailorSession}
+                  onDismissTailor={() => setTailorSession(null)}
+                  onOpenJobPosting={(url) => window.open(url, '_blank', 'noopener,noreferrer')}
+                  onShowListingInBoard={openListingFromTailoring}
                 />
               )
             ) : null}

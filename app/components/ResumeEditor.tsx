@@ -7,8 +7,31 @@ import { applyResumeSuggestion, type ResumeSuggestion } from '@/lib/applyResumeS
 import ResumePreview, { TEMPLATE_IDS, type TemplateId } from './ResumePreview'
 import type { ResumeData } from '@/lib/profile'
 import { normalizedResumeData, genId } from '@/lib/profile'
+import type { ResumeVersionTailoring, TailorResumeSession } from '@/lib/resumeTailoring'
 
 export type { ResumeData }
+
+function sessionToTailoringNav(s: TailorResumeSession): ResumeVersionTailoring {
+  return {
+    job_listing_id: s.listing_id,
+    title: s.title,
+    company: s.company,
+    url: s.url,
+    stable_external_id: s.stable_external_id,
+    source_tab: s.sourceTab,
+  }
+}
+
+function tailoringLabel(t: ResumeVersionTailoring | null | undefined): string | null {
+  if (!t) return null
+  const a = t.title?.trim()
+  const b = t.company?.trim()
+  if (a && b) return `${a} · ${b}`
+  if (a) return a
+  if (b) return b
+  if (t.job_listing_id || t.url || t.stable_external_id) return 'Job-specific version'
+  return null
+}
 
 /** Section key for grouping suggestions: identity | summary | skills | experience-0, experience-1, ... */
 function sectionForPath(path: string): string {
@@ -23,6 +46,7 @@ interface VersionItem {
   id: string
   created_at: string
   file_name?: string
+  tailoring?: ResumeVersionTailoring | null
 }
 
 interface ResumeEditorProps {
@@ -30,6 +54,10 @@ interface ResumeEditorProps {
   versions: VersionItem[]
   onSave: (data: ResumeData) => Promise<void>
   onRestore: (versionId: string) => Promise<void>
+  tailorSession?: TailorResumeSession | null
+  onDismissTailor?: () => void
+  onOpenJobPosting?: (url: string) => void
+  onShowListingInBoard?: (t: ResumeVersionTailoring) => void
 }
 
 export default function ResumeEditor({
@@ -37,6 +65,10 @@ export default function ResumeEditor({
   versions,
   onSave,
   onRestore,
+  tailorSession,
+  onDismissTailor,
+  onOpenJobPosting,
+  onShowListingInBoard,
 }: ResumeEditorProps) {
   const [data, setData] = useState<ResumeData>(() => normalizedResumeData(initialData))
   const [saving, setSaving] = useState(false)
@@ -49,14 +81,18 @@ export default function ResumeEditor({
     setData(normalizedResumeData(initialData))
   }, [initialData])
 
-  // Auto-fetch suggestions when editor loads or data is restored
+  // Auto-fetch suggestions when editor loads or data is restored (JD-aware when tailoring)
   useEffect(() => {
     setSuggestLoading(true)
     const payload = normalizedResumeData(initialData)
+    const jd = tailorSession?.jdText?.trim()
     fetch('/api/resume/suggest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resumeData: payload }),
+      body: JSON.stringify({
+        resumeData: payload,
+        ...(jd ? { jobDescription: jd } : {}),
+      }),
       credentials: 'include',
     })
       .then((r) => r.json())
@@ -64,7 +100,7 @@ export default function ResumeEditor({
         if (json.success && Array.isArray(json.suggestions)) setSuggestions(json.suggestions)
       })
       .finally(() => setSuggestLoading(false))
-  }, [initialData])
+  }, [initialData, tailorSession?.jdText])
 
   function updateIdentity(field: keyof Omit<ResumeData['identity'], 'links'>, value: string) {
     setData((d) => ({ ...d, identity: { ...d.identity, [field]: value } }))
@@ -243,6 +279,47 @@ export default function ResumeEditor({
           </div>
         </div>
 
+        {tailorSession && (
+          <div
+            className="resume-tailor-banner mb-4 flex flex-col gap-3 rounded-lg border border-border bg-muted/35 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            role="status"
+          >
+            <div className="min-w-0">
+              <p className="m-0 text-sm font-medium text-foreground">
+                Tailoring for {tailorSession.title || 'Role'} · {tailorSession.company || 'Company'}
+              </p>
+              <p className="mt-1 m-0 text-xs text-muted-foreground">
+                Suggestions align with this job description. Save attaches this version to the listing in history.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              {tailorSession.url && onOpenJobPosting ? (
+                <button
+                  type="button"
+                  className="secondary-button small"
+                  onClick={() => onOpenJobPosting(tailorSession.url!)}
+                >
+                  Open posting
+                </button>
+              ) : null}
+              {onShowListingInBoard ? (
+                <button
+                  type="button"
+                  className="secondary-button small"
+                  onClick={() => onShowListingInBoard(sessionToTailoringNav(tailorSession))}
+                >
+                  Show in job list
+                </button>
+              ) : null}
+              {onDismissTailor ? (
+                <button type="button" className="secondary-button small" onClick={onDismissTailor}>
+                  Dismiss
+                </button>
+              ) : null}
+            </div>
+          </div>
+        )}
+
         <section className="resume-section">
           <h2 className="resume-section-title">Contact</h2>
           <div className="resume-fields">
@@ -418,22 +495,45 @@ export default function ResumeEditor({
           <h2 className="resume-section-title">Version history</h2>
           <p className="resume-versions-hint">Each save is a new version. Restore loads that version into the editor.</p>
           <ul className="resume-versions-list">
-            {versions.map((v) => (
-              <li key={v.id} className="resume-version-item">
-                <div className="resume-version-meta">
-                  <span className="resume-version-date">{formatVersionDate(v.created_at)}</span>
-                  {v.file_name && <span className="resume-version-file">{v.file_name}</span>}
-                </div>
-                <button
-                  type="button"
-                  className="secondary-button small"
-                  onClick={() => handleRestore(v.id)}
-                  disabled={restoringId === v.id}
-                >
-                  {restoringId === v.id ? '…' : 'Restore'}
-                </button>
-              </li>
-            ))}
+            {versions.map((v) => {
+              const tlabel = tailoringLabel(v.tailoring ?? null)
+              const canViewListing =
+                onShowListingInBoard &&
+                v.tailoring &&
+                (v.tailoring.stable_external_id || v.tailoring.url)
+              return (
+                <li key={v.id} className="resume-version-item">
+                  <div className="resume-version-meta">
+                    <span className="resume-version-date">{formatVersionDate(v.created_at)}</span>
+                    {v.file_name && <span className="resume-version-file">{v.file_name}</span>}
+                    {tlabel && (
+                      <span className="resume-version-listing block text-xs text-muted-foreground mt-1">
+                        {tlabel}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5 items-stretch sm:items-end">
+                    {canViewListing ? (
+                      <button
+                        type="button"
+                        className="secondary-button small"
+                        onClick={() => onShowListingInBoard!(v.tailoring!)}
+                      >
+                        View listing
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="secondary-button small"
+                      onClick={() => handleRestore(v.id)}
+                      disabled={restoringId === v.id}
+                    >
+                      {restoringId === v.id ? '…' : 'Restore'}
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         </div>
       </aside>

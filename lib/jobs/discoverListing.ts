@@ -13,6 +13,11 @@ export interface DiscoverListing {
 }
 
 /** Persisted apply state merged in GET /api/jobs/discover (same shape + server listing id + apply columns). */
+/** Full job description text for tailoring / fit (matches job detail body). */
+export function jdTextFromListing(l: Pick<DiscoverListing, 'description' | 'snippet'>): string {
+  return l.description?.trim() || l.snippet?.trim() || ''
+}
+
 export type DiscoverListingWithApply = DiscoverListing & {
   /** Same key stored in job_listings.external_id (JSearch id or legacy:hash). */
   stable_external_id: string

@@ -16,6 +16,7 @@ export interface JobRowCardProps {
   compact: boolean
   onPatchListing: (stable_external_id: string, patch: Partial<DiscoverListingWithApply>) => void
   onOpenDataTab?: () => void
+  onTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
 export const JobRowCard = memo(function JobRowCard({
@@ -26,6 +27,7 @@ export const JobRowCard = memo(function JobRowCard({
   compact,
   onPatchListing,
   onOpenDataTab,
+  onTailorResume,
 }: JobRowCardProps) {
   const title = job.title || 'Untitled'
   const posted = formatPostedRelative(job.posted_at)
@@ -75,7 +77,12 @@ export const JobRowCard = memo(function JobRowCard({
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <LazyJobFitIndicator listing={job} triggerCheck={checkAllTrigger} onOpenDataTab={onOpenDataTab} />
+          <LazyJobFitIndicator
+            listing={job}
+            triggerCheck={checkAllTrigger}
+            onOpenDataTab={onOpenDataTab}
+            onTailorToJob={onTailorResume ? () => void onTailorResume(job) : undefined}
+          />
           {job.url ? (
             <ApplyOpenButton listing={job} url={job.url} label="Apply" onPatch={onPatchListing} />
           ) : null}

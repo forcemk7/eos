@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { JobFitIndicator } from '@/app/components/JobFitIndicator'
@@ -16,6 +16,7 @@ interface JobDetailContentProps {
   checkAllTrigger?: number
   onPatchListing: (stable_external_id: string, patch: Partial<DiscoverListingWithApply>) => void
   onOpenDataTab?: () => void
+  onTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
 export function JobDetailContent({
@@ -25,7 +26,9 @@ export function JobDetailContent({
   checkAllTrigger,
   onPatchListing,
   onOpenDataTab,
+  onTailorResume,
 }: JobDetailContentProps) {
+  const [tailorBusy, setTailorBusy] = useState(false)
   const title = job.title || 'Untitled'
   const posted = formatPostedRelative(job.posted_at)
   const source = formatSourceLabel(job.source)
@@ -39,6 +42,16 @@ export function JobDetailContent({
       // ignore
     }
   }, [job.url])
+
+  const handleTailorResume = useCallback(async () => {
+    if (!onTailorResume || tailorBusy) return
+    setTailorBusy(true)
+    try {
+      await onTailorResume(job)
+    } finally {
+      setTailorBusy(false)
+    }
+  }, [job, onTailorResume, tailorBusy])
 
   const headerInner = (
     <>
@@ -98,7 +111,12 @@ export function JobDetailContent({
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <div className="mb-6 flex items-center gap-3">
           <span className="text-sm font-medium text-muted-foreground">Fit</span>
-          <JobFitIndicator listing={job} triggerCheck={checkAllTrigger} onOpenDataTab={onOpenDataTab} />
+          <JobFitIndicator
+            listing={job}
+            triggerCheck={checkAllTrigger}
+            onOpenDataTab={onOpenDataTab}
+            onTailorToJob={onTailorResume ? () => void handleTailorResume() : undefined}
+          />
         </div>
         <section aria-label="Job description">
           <h3 className="mb-2 text-sm font-semibold text-foreground">About this role</h3>
@@ -110,6 +128,17 @@ export function JobDetailContent({
       <footer className="sticky bottom-0 z-10 flex flex-col gap-2 border-t border-border bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 motion-reduce:backdrop-blur-none">
         <p className="m-0 text-center text-xs text-muted-foreground">Opens on the employer or job site</p>
         <div className="flex flex-wrap gap-2">
+          {onTailorResume ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1 sm:flex-none"
+              disabled={tailorBusy}
+              onClick={handleTailorResume}
+            >
+              {tailorBusy ? 'Opening…' : 'Tailor resume to listing'}
+            </Button>
+          ) : null}
           {job.url ? (
             <ApplyOpenButton
               listing={job}

@@ -76,10 +76,17 @@ function dedupeAppend(
 
 interface AIJobsTabProps {
   onOpenDataTab?: () => void
-  onOpenResumeTab?: () => void
+  focusStableExternalId?: string | null
+  onFocusListingConsumed?: () => void
+  onStartTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
-export default function AIJobsTab({ onOpenDataTab, onOpenResumeTab }: AIJobsTabProps) {
+export default function AIJobsTab({
+  onOpenDataTab,
+  focusStableExternalId,
+  onFocusListingConsumed,
+  onStartTailorResume,
+}: AIJobsTabProps) {
   const [aiListings, setAiListings] = useState<DiscoverListingWithApply[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -251,7 +258,7 @@ export default function AIJobsTab({ onOpenDataTab, onOpenResumeTab }: AIJobsTabP
 
   return (
     <JobsShell>
-      <StrongMatchLoopPanel onOpenDataTab={onOpenDataTab} onOpenResumeTab={onOpenResumeTab} />
+      <StrongMatchLoopPanel onOpenDataTab={onOpenDataTab} onStartTailorResume={onStartTailorResume} />
       <Card className="jobs-board-surface border-border">
         <CardHeader className="jobs-board-header app-board-header">
           <CardTitle className="jobs-section-title">AI job board</CardTitle>
@@ -303,6 +310,10 @@ export default function AIJobsTab({ onOpenDataTab, onOpenResumeTab }: AIJobsTabP
                     checkAllTrigger={checkAllTrigger ?? undefined}
                     onPatchListing={patchListing}
                     onOpenDataTab={onOpenDataTab}
+                    focusStableExternalId={focusStableExternalId}
+                    onFocusConsumed={onFocusListingConsumed}
+                    listingsLoading={aiLoading}
+                    onTailorResume={onStartTailorResume}
                   />
                   {hasMore && (
                     <div className="flex justify-center pt-2">
