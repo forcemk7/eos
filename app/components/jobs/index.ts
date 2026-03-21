@@ -16,3 +16,4 @@ export {
   JobGeneratingQualifications,
 } from './JobBoardStates'
 export { sortListings, listingKey, sameListing, type JobSort } from './utils'
+export { StrongMatchLoopPanel, type StrongMatchLoopPanelProps } from './StrongMatchLoopPanel'

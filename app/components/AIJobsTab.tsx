@@ -12,6 +12,7 @@ import {
   JobEmptyAI,
   JobErrorState,
   JobGeneratingQualifications,
+  StrongMatchLoopPanel,
   type DiscoverListing,
   type DiscoverListingWithApply,
   type FilterChip,
@@ -75,9 +76,10 @@ function dedupeAppend(
 
 interface AIJobsTabProps {
   onOpenDataTab?: () => void
+  onOpenResumeTab?: () => void
 }
 
-export default function AIJobsTab({ onOpenDataTab }: AIJobsTabProps) {
+export default function AIJobsTab({ onOpenDataTab, onOpenResumeTab }: AIJobsTabProps) {
   const [aiListings, setAiListings] = useState<DiscoverListingWithApply[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -249,6 +251,7 @@ export default function AIJobsTab({ onOpenDataTab }: AIJobsTabProps) {
 
   return (
     <JobsShell>
+      <StrongMatchLoopPanel onOpenDataTab={onOpenDataTab} onOpenResumeTab={onOpenResumeTab} />
       <Card className="jobs-board-surface border-border">
         <CardHeader className="jobs-board-header app-board-header">
           <CardTitle className="jobs-section-title">AI job board</CardTitle>

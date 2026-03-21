@@ -35,7 +35,7 @@ Open `http://localhost:3000`. Sign up, upload a resume, edit and use suggestions
 ### Supabase
 
 1. **Auth** — Enable Email auth.
-2. **Database** — Run `backend/schema.sql` on a fresh project, or apply incremental files under `backend/migrations/` (e.g. `20250320_t6_apply_tracking.sql` for job apply logging + `application_events`). Re-run is safe where marked idempotent.
+2. **Database** — Run `backend/schema.sql` on a fresh project, or apply incremental files under `backend/migrations/` (e.g. `20250320_t6_apply_tracking.sql` for job apply logging + `application_events`, `20250321_t5_match_loop.sql` for “Find a strong match” sessions/iterations). Re-run is safe where marked idempotent.
 3. **Storage** — Bucket `resumes` with policies for authenticated upload/read under `{user_id}/`.
 
 ### Project layout

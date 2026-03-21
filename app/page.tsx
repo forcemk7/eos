@@ -217,7 +217,10 @@ export default function Home() {
             ) : tab === 'jobs' ? (
               <JobsTab onOpenDataTab={() => handleNavigate('data')} />
             ) : tab === 'ai-jobs' ? (
-              <AIJobsTab onOpenDataTab={() => handleNavigate('data')} />
+              <AIJobsTab
+                onOpenDataTab={() => handleNavigate('data')}
+                onOpenResumeTab={() => handleNavigate('resume')}
+              />
             ) : tab === 'applications' ? (
               <ApplicationsTab onBrowseJobs={() => setTab('jobs')} onBrowseRecommended={() => setTab('ai-jobs')} />
             ) : tab === 'cover-letter' ? (

@@ -37,6 +37,37 @@ export interface JobFitSuccessResponse {
 /** Fit payload after a successful API call (client-side). */
 export type JobFitClientResult = Omit<JobFitSuccessResponse, 'success'>
 
+/** Documented default for “strong match” (aligned with score bands in prompts and labelFromScore). */
+export const STRONG_MATCH_CRITERIA = {
+  minScore: 76,
+  label: 'great' as const,
+  screening_likelihood: 'qualified' as const,
+}
+
+/** One-line copy for tooltips / panel intros. */
+export const STRONG_MATCH_CRITERIA_DESCRIPTION =
+  'Strong match = score in the strong band (76+), label “great”, and screening estimate “qualified” — open “Why” for factors and detail.'
+
+export interface StrongMatchCriteriaOptions {
+  minScore?: number
+  label?: FitLabel
+  screening?: ScreeningLikelihood
+}
+
+export function isStrongMatch(
+  result: Pick<JobFitSuccessResponse, 'score' | 'label' | 'screening_likelihood'>,
+  criteria: StrongMatchCriteriaOptions = {}
+): boolean {
+  const minScore = criteria.minScore ?? STRONG_MATCH_CRITERIA.minScore
+  const label = criteria.label ?? STRONG_MATCH_CRITERIA.label
+  const screening = criteria.screening ?? STRONG_MATCH_CRITERIA.screening_likelihood
+  return (
+    result.score >= minScore &&
+    result.label === label &&
+    result.screening_likelihood === screening
+  )
+}
+
 export function toClientFitResult(r: JobFitSuccessResponse): JobFitClientResult {
   return {
     score: r.score,
