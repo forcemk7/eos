@@ -4,6 +4,7 @@
  */
 
 import type { ResumeData } from '@/lib/profile'
+import type { DataSectionId } from '@/lib/dataSection'
 
 export type TabId = 'data' | 'jobs' | 'resume'
 
@@ -127,4 +128,48 @@ export function getProfileCompleteness(data: ResumeData | null, hasResume: boole
 /** Set of missing item ids for quick lookup (e.g. to style a field as incomplete). */
 export function missingIdsSet(completeness: ProfileCompleteness): Set<string> {
   return new Set(completeness.missingItems.map((m) => m.id))
+}
+
+/** App main tab for setup deep links (subset of sidebar tabs). */
+export type SetupNavTab = 'data' | 'resume'
+
+export interface SetupAction {
+  missingItem: MissingItem
+  tab: SetupNavTab
+  /** Profile sub-panel when `tab` is `data`; null for resume or unknown ids. */
+  dataSection: DataSectionId | null
+}
+
+/**
+ * Maps a missing-field id from getProfileCompleteness to the Profile tab section.
+ * Returns null for resume-only items.
+ */
+export function missingItemIdToDataSection(missingId: string): DataSectionId | null {
+  if (
+    missingId === DATA_MISSING_IDS.identity_name ||
+    missingId === DATA_MISSING_IDS.identity_email ||
+    missingId === DATA_MISSING_IDS.identity_phone ||
+    missingId === DATA_MISSING_IDS.identity_location
+  ) {
+    return 'contact'
+  }
+  if (missingId === DATA_MISSING_IDS.links) return 'links'
+  if (missingId === DATA_MISSING_IDS.summary) return 'summary'
+  if (missingId === DATA_MISSING_IDS.experience) return 'experience'
+  if (missingId === DATA_MISSING_IDS.education) return 'education'
+  if (missingId === DATA_MISSING_IDS.skills) return 'skills'
+  if (missingId === DATA_MISSING_IDS.achievements) return 'achievements'
+  if (missingId === DATA_MISSING_IDS.languages) return 'languages'
+  if (missingId === DATA_MISSING_IDS.additional) return 'additional'
+  return null
+}
+
+/** Ordered setup steps for dashboard and global strip (same order as missingItems). */
+export function getOrderedSetupActions(data: ResumeData | null, hasResume: boolean): SetupAction[] {
+  const { missingItems } = getProfileCompleteness(data, hasResume)
+  return missingItems.map((missingItem) => ({
+    missingItem,
+    tab: missingItem.location === 'resume' ? 'resume' : 'data',
+    dataSection: missingItem.location === 'data' ? missingItemIdToDataSection(missingItem.id) : null,
+  }))
 }
