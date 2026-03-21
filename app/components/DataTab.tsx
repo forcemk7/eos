@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { Upload } from 'lucide-react'
 import type { ResumeData } from '@/lib/profile'
 import { normalizedResumeData, genId } from '@/lib/profile'
 import { getDataIncompleteCount } from '@/lib/profileCompleteness'
-import { AppShell } from '@/app/components/shell'
+import type { DataSectionId } from '@/lib/dataSection'
+import { AppShell, AppEmptyState } from '@/app/components/shell'
 import {
   ContactPanel,
   LinksPanel,
@@ -26,6 +28,9 @@ interface DataTabProps {
   onDataChange: () => void
   /** Called when data-tab incomplete count changes (for tab badge and dashboard). */
   onCompletenessChange?: (dataIncompleteCount: number) => void
+  /** When set (e.g. from dashboard), switch to this profile sub-panel after mount. */
+  focusSection?: DataSectionId | null
+  onFocusSectionConsumed?: () => void
 }
 
 export default function DataTab({
@@ -33,6 +38,8 @@ export default function DataTab({
   onSave,
   onDataChange,
   onCompletenessChange,
+  focusSection = null,
+  onFocusSectionConsumed,
 }: DataTabProps) {
   const [data, setData] = useState<ResumeData>(() => normalizedResumeData(initialData ?? undefined))
   const [saving, setSaving] = useState(false)
@@ -40,11 +47,21 @@ export default function DataTab({
   const [uploadError, setUploadError] = useState(false)
   const [pastedText, setPastedText] = useState('')
   const [newSkillName, setNewSkillName] = useState('')
-  const [activeTab, setActiveTab] = useState<
-    'contact' | 'links' | 'summary' | 'experience' | 'education' | 'achievements' | 'skills' | 'languages' | 'additional'
-  >('contact')
+  const [activeTab, setActiveTab] = useState<DataSectionId>('contact')
   const [targetProfileRefreshKey, setTargetProfileRefreshKey] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const pasteInputRef = useRef<HTMLInputElement>(null)
+  const uploadStripRef = useRef<HTMLElement>(null)
+
+  const focusUploadFile = useCallback(() => {
+    uploadStripRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.setTimeout(() => fileInputRef.current?.click(), 250)
+  }, [])
+
+  const focusPasteField = useCallback(() => {
+    uploadStripRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.setTimeout(() => pasteInputRef.current?.focus(), 250)
+  }, [])
 
   useEffect(() => {
     setData(normalizedResumeData(initialData ?? undefined))
@@ -419,6 +436,12 @@ export default function DataTab({
       (data.additional?.length ?? 0) > 0
   )
 
+  useEffect(() => {
+    if (focusSection == null) return
+    if (hasData) setActiveTab(focusSection)
+    onFocusSectionConsumed?.()
+  }, [focusSection, hasData, onFocusSectionConsumed])
+
   const totalChunks =
     (data.summary ? 1 : 0) +
     (data.links?.length ?? 0) +
@@ -476,7 +499,7 @@ export default function DataTab({
 
   return (
     <AppShell className="data-tab">
-      <section className="data-upload data-upload-compact panel">
+      <section ref={uploadStripRef} className="data-upload data-upload-compact panel">
         <div
           className="data-upload-row"
           onDragOver={(e) => e.preventDefault()}
@@ -502,6 +525,7 @@ export default function DataTab({
           </button>
           <span className="data-upload-sep">or</span>
           <input
+            ref={pasteInputRef}
             type="text"
             className="data-paste-inline"
             value={pastedText}
@@ -518,6 +542,9 @@ export default function DataTab({
             Parse & add
           </Button>
         </div>
+        <p className="data-upload-purpose">
+          Parsed fields feed job matching, your target profile, and tailored resumes and cover letters.
+        </p>
         {uploadStatus && (
           <p className={uploadError ? 'data-upload-error' : 'data-upload-status'}>{uploadStatus}</p>
         )}
@@ -538,12 +565,19 @@ export default function DataTab({
           )}
         </div>
         {!hasData ? (
-          <p className="m-0 rounded-xl border border-dashed border-border bg-muted/15 px-4 py-4 text-sm leading-relaxed text-muted-foreground">
-            Upload a file or paste text above. We’ll extract Contact, Experience, Education, Achievements, Skills,
-            Languages, and Additional into the tabs below.
-          </p>
+          <AppEmptyState
+            icon={<Upload className="h-8 w-8 opacity-70" aria-hidden />}
+            title="No profile data yet"
+            description="Use the upload bar above to add a file or paste resume text. We’ll extract contact, experience, education, skills, and more into the tabs below."
+            primaryAction={{ label: 'Upload a file', onClick: focusUploadFile }}
+            secondaryAction={{ label: 'Focus paste field', onClick: focusPasteField }}
+          />
         ) : (
           <>
+            <p className="data-incomplete-explainer">
+              Dashed outlines and small “Add …” labels mark fields we still need so job matching and tailored
+              documents use complete, accurate facts.
+            </p>
             <div className="data-tabs" role="tablist">
               {tabs.map((tab) => (
                 <button

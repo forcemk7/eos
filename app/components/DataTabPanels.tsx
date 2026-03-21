@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import type { ResumeData } from '@/lib/profile'
 import { LANGUAGE_LEVELS } from '@/lib/profile'
-import { MISSING_IDS, fieldIncomplete, type IncompleteContext } from '@/lib/profileCompleteness'
 import { Button } from '@/app/components/ui/button'
 
 export interface DataTabHandlers {
@@ -49,6 +48,9 @@ export function ContactPanel({ data, h }: { data: ResumeData; h: DataTabHandlers
   const locationMissing = empty(data.identity.location)
   return (
     <div className="data-chunk-group" role="tabpanel">
+      <p className="data-panel-purpose">
+        How employers reach you and where you’re based—used in search filters and document headers.
+      </p>
       <div className="data-chunk-card data-chunk-contact">
         <div className={`data-chunk-field${nameMissing ? ' incomplete' : ''}`} data-incomplete-hint={nameMissing ? 'Add name' : undefined}>
           <label>Name</label>
@@ -84,7 +86,9 @@ export function LinksPanel({ data, h }: { data: ResumeData; h: DataTabHandlers }
     <div className={`data-chunk-group links-panel${linksMissing ? ' incomplete' : ''}`} role="tabpanel">
       <div className="links-panel-header">
         <h3 className="links-panel-title">URLs</h3>
-        <p className="links-panel-desc">LinkedIn, portfolio, GitHub—any relevant links in one place.</p>
+        <p className="links-panel-desc">
+          LinkedIn, portfolio, GitHub—helps match you to listings and fills link sections in tailored resumes and cover letters.
+        </p>
       </div>
       <div className="links-add-row">
         <input
@@ -128,6 +132,9 @@ export function SummaryPanel({ data, h }: { data: ResumeData; h: DataTabHandlers
   const summaryMissing = empty(data.summary)
   return (
     <div className={`data-chunk-group${summaryMissing ? ' incomplete' : ''}`} role="tabpanel">
+      <p className="data-panel-purpose">
+        A short positioning statement—drives fit scoring and strong opening lines in tailored documents.
+      </p>
       <div className="data-chunk-card">
         <textarea className={`data-chunk-summary${summaryMissing ? ' incomplete' : ''}`} value={data.summary} onChange={(e) => h.updateSummary(e.target.value)} placeholder="2–4 sentences: role level, key strengths, what you're targeting." rows={4} aria-invalid={summaryMissing} />
         {summaryMissing && <span className="incomplete-badge">Add summary</span>}
@@ -136,10 +143,13 @@ export function SummaryPanel({ data, h }: { data: ResumeData; h: DataTabHandlers
   )
 }
 
-export function ExperiencePanel({ data, h, incomplete }: { data: ResumeData; h: DataTabHandlers; incomplete?: IncompleteContext }) {
-  const experienceMissing = fieldIncomplete(incomplete?.missingSet, MISSING_IDS.experience)
+export function ExperiencePanel({ data, h }: { data: ResumeData; h: DataTabHandlers }) {
+  const experienceMissing = (data.experience ?? []).length === 0
   return (
     <div className={`data-chunk-group${experienceMissing ? ' incomplete' : ''}`} role="tabpanel">
+      <p className="data-panel-purpose">
+        Roles and impact employers scan first; we reuse bullets when tailoring resumes and cover letters.
+      </p>
       <div className="data-chunk-group-head">
         <Button type="button" variant="outline" size="sm" onClick={h.addExperience}>+ Add position</Button>
         {experienceMissing && <span className="incomplete-badge">Add experience</span>}
@@ -176,6 +186,9 @@ export function EducationPanel({ data, h }: { data: ResumeData; h: DataTabHandle
   const educationMissing = list.length === 0
   return (
     <div className={`data-chunk-group${educationMissing ? ' incomplete' : ''}`} role="tabpanel">
+      <p className="data-panel-purpose">
+        Degrees and schools that signal level and eligibility in search and on your resume.
+      </p>
       <div className="data-chunk-group-head">
         <Button type="button" variant="outline" size="sm" onClick={h.addEducation}>+ Add education</Button>
         {educationMissing && <span className="incomplete-badge">Add education</span>}
@@ -203,6 +216,9 @@ export function AchievementsPanel({ data, h }: { data: ResumeData; h: DataTabHan
   const achievementsMissing = list.length === 0
   return (
     <div className={`data-chunk-group${achievementsMissing ? ' incomplete' : ''}`} role="tabpanel">
+      <p className="data-panel-purpose">
+        Awards and certifications that add credibility beyond employment for matching and documents.
+      </p>
       <div className="data-chunk-group-head">
         <Button type="button" variant="outline" size="sm" onClick={h.addAchievement}>+ Add achievement</Button>
         {achievementsMissing && <span className="incomplete-badge">Add achievements</span>}
@@ -225,6 +241,9 @@ export function SkillsPanel({ data, h, newSkillName, setNewSkillName }: { data: 
   const skillsMissing = data.skills.length === 0
   return (
     <div className={`data-chunk-group${skillsMissing ? ' incomplete' : ''}`} role="tabpanel">
+      <p className="data-panel-purpose">
+        Keywords that overlap with job posts and populate skills sections in tailored outputs.
+      </p>
       {skillsMissing && (
         <div className="data-chunk-group-head" style={{ marginBottom: 8 }}>
           <span className="incomplete-badge">Add skills</span>
@@ -251,6 +270,9 @@ export function LanguagesPanel({ data, h }: { data: ResumeData; h: DataTabHandle
   const languagesMissing = list.length === 0
   return (
     <div className={`data-chunk-group${languagesMissing ? ' incomplete' : ''}`} role="tabpanel">
+      <p className="data-panel-purpose">
+        Languages and proficiency—used for multilingual-role matching and accurate wording.
+      </p>
       <div className="data-chunk-group-head">
         <Button type="button" variant="outline" size="sm" onClick={h.addLanguage}>+ Add language</Button>
         {languagesMissing && <span className="incomplete-badge">Add languages</span>}
@@ -282,6 +304,9 @@ export function AdditionalPanel({ data, h }: { data: ResumeData; h: DataTabHandl
   const additionalMissing = list.length === 0
   return (
     <div className={`data-chunk-group${additionalMissing ? ' incomplete' : ''}`} role="tabpanel">
+      <p className="data-panel-purpose">
+        Optional sections—volunteering, licenses, interests—for niche fit and extra resume blocks.
+      </p>
       <div className="data-chunk-group-head">
         <Button type="button" variant="outline" size="sm" onClick={h.addAdditionalSection}>+ Add a section</Button>
         {additionalMissing && <span className="incomplete-badge">Add section</span>}

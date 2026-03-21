@@ -7,6 +7,8 @@ import type { CandidateReadout } from '@/lib/jobs/candidateReadout'
 import { normalizeTargetKey } from '@/lib/jobs/targetProfileTypes'
 import CandidateReadoutBlock from '@/app/components/CandidateReadoutBlock'
 import { Button } from '@/app/components/ui/button'
+import { AppLoadingBlock, AppErrorState } from '@/app/components/shell'
+import { humanizeFetchError } from '@/lib/humanizeFetchError'
 
 interface JobQualificationsRow {
   search_query: string
@@ -68,7 +70,13 @@ export default function TargetProfilePanel({
       const res = await fetch('/api/jobs/qualifications', { credentials: 'include' })
       const data = (await res.json()) as QualificationsPayload
       if (!res.ok || !data.success) {
-        setError(data.error || 'Could not load target profile.')
+        setError(
+          humanizeFetchError(null, {
+            status: res.status,
+            apiMessage: data.error,
+            fallback: 'Could not load target profile.',
+          })
+        )
         setQualifications(null)
         setRoles([])
         setSectors([])
@@ -87,8 +95,8 @@ export default function TargetProfilePanel({
       setPinnedRoleKey(
         typeof data.pinned_role_key === 'string' && data.pinned_role_key ? data.pinned_role_key : null
       )
-    } catch {
-      setError('Could not load target profile.')
+    } catch (e) {
+      setError(humanizeFetchError(e, { fallback: 'Could not load target profile.' }))
       setCandidateReadout(null)
       setReadoutStale(false)
     } finally {
@@ -112,7 +120,9 @@ export default function TargetProfilePanel({
       })
       const data = (await res.json()) as QualificationsPayload
       if (!res.ok || !data.success) {
-        setError(data.error || 'Update failed.')
+        setError(
+          humanizeFetchError(null, { status: res.status, apiMessage: data.error, fallback: 'Update failed.' })
+        )
         return
       }
       setStale(Boolean(data.stale))
@@ -126,8 +136,8 @@ export default function TargetProfilePanel({
       setPinnedRoleKey(
         typeof data.pinned_role_key === 'string' && data.pinned_role_key ? data.pinned_role_key : null
       )
-    } catch {
-      setError('Update failed.')
+    } catch (e) {
+      setError(humanizeFetchError(e, { fallback: 'Update failed.' }))
     } finally {
       setPatching(false)
     }
@@ -140,7 +150,13 @@ export default function TargetProfilePanel({
       const res = await fetch('/api/jobs/qualifications', { method: 'POST', credentials: 'include' })
       const data = (await res.json()) as QualificationsPayload
       if (!res.ok || !data.success) {
-        setError(data.error || 'Could not generate targets.')
+        setError(
+          humanizeFetchError(null, {
+            status: res.status,
+            apiMessage: data.error,
+            fallback: 'Could not generate targets.',
+          })
+        )
         return
       }
       setStale(Boolean(data.stale))
@@ -154,8 +170,8 @@ export default function TargetProfilePanel({
       setPinnedRoleKey(
         typeof data.pinned_role_key === 'string' && data.pinned_role_key ? data.pinned_role_key : null
       )
-    } catch {
-      setError('Could not generate targets.')
+    } catch (e) {
+      setError(humanizeFetchError(e, { fallback: 'Could not generate targets.' }))
     } finally {
       setGenerating(false)
     }
@@ -172,8 +188,8 @@ export default function TargetProfilePanel({
             Target profile
           </h2>
           <p className="panel-subtitle m-0 mt-1 text-sm text-muted-foreground">
-            Roles and sectors to anchor job search. Generated from your data; pin one role as the default search
-            query.
+            Roles and sectors to anchor job search. Generated from your profile—regenerate after you change data
+            below. Pin one role as the default search query.
           </p>
         </div>
         <Button
@@ -193,13 +209,16 @@ export default function TargetProfilePanel({
       )}
 
       {hasData && loading && (
-        <p className="m-0 text-sm text-muted-foreground">Loading recommendations…</p>
+        <AppLoadingBlock message="Loading recommendations…" className="py-4" />
       )}
 
       {error && (
-        <p className="m-0 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
+        <AppErrorState
+          message={error}
+          onRetry={() => void load()}
+          onDismiss={() => setError(null)}
+          className="py-4"
+        />
       )}
 
       {hasData && !loading && stale && (
