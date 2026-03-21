@@ -104,17 +104,23 @@ export function JobEmptyAI({ onRefresh }: { onRefresh: () => void }) {
 export function JobErrorState({
   message,
   onRetry,
+  onDismiss,
+  className,
 }: {
   message: string
   onRetry?: () => void
+  onDismiss?: () => void
+  className?: string
 }) {
   return (
     <JobStateBlock
       role="alert"
+      className={className}
       icon={<AlertCircle className="h-8 w-8 text-destructive opacity-90" />}
       title="Something went wrong"
       description={message}
       primaryAction={onRetry ? { label: 'Try again', onClick: onRetry } : undefined}
+      secondaryAction={onDismiss ? { label: 'Dismiss', onClick: onDismiss } : undefined}
     />
   )
 }

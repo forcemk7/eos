@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useChat, type UIMessage } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { MessageSquare } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import { AppLoadingBlock, AppEmptyState, AppErrorState } from '@/app/components/shell'
 import { exportCoverLetterToPdf } from '@/lib/exportCoverLetterPdf'
+import { humanizeFetchError } from '@/lib/humanizeFetchError'
 
 const coverLetterTransport = new DefaultChatTransport({
   api: '/api/cover-letter/chat',
@@ -417,7 +420,11 @@ export default function CoverLetterTab() {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [loadedMessages, setLoadedMessages] = useState<UIMessage[] | null>(null)
   const [loadingChats, setLoadingChats] = useState(true)
+  const [chatsListError, setChatsListError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loadingThread, setLoadingThread] = useState(false)
+  const [threadError, setThreadError] = useState<string | null>(null)
+  const [messagesRetryKey, setMessagesRetryKey] = useState(0)
   const [menuChatId, setMenuChatId] = useState<string | null>(null)
   const [renameChatId, setRenameChatId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -470,14 +477,22 @@ export default function CoverLetterTab() {
 
   const loadChats = useCallback(async () => {
     setLoadingChats(true)
-    setError(null)
+    setChatsListError(null)
     try {
       const res = await fetch('/api/cover-letter/chats', { credentials: 'include' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to load chats')
+      if (!res.ok) {
+        throw new Error(
+          humanizeFetchError(null, {
+            status: res.status,
+            apiMessage: typeof data.error === 'string' ? data.error : undefined,
+            fallback: 'Failed to load chats.',
+          })
+        )
+      }
       setChats(data.chats ?? [])
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load chats')
+      setChatsListError(humanizeFetchError(e, { fallback: 'Failed to load chats.' }))
     } finally {
       setLoadingChats(false)
     }
@@ -548,36 +563,55 @@ export default function CoverLetterTab() {
   useEffect(() => {
     if (!currentChatId) {
       setLoadedMessages(null)
+      setLoadingThread(false)
+      setThreadError(null)
       return
     }
     let cancelled = false
-    fetch(`/api/cover-letter/chats/${currentChatId}`, { credentials: 'include' })
-      .then((res) => {
+    setLoadingThread(true)
+    setThreadError(null)
+    setLoadedMessages(null)
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/cover-letter/chats/${currentChatId}`, { credentials: 'include' })
+        if (cancelled) return
         if (res.status === 404) {
-          if (!cancelled) {
-            setCurrentChatId(null)
-            setLoadedMessages(null)
-            persistLastChatId(null)
-          }
-          return null
+          setCurrentChatId(null)
+          setLoadedMessages(null)
+          persistLastChatId(null)
+          setLoadingThread(false)
+          return
         }
-        return res.json()
-      })
-      .then((data) => {
-        if (cancelled || data === null) return
+        const data = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!res.ok) {
+          setThreadError(
+            humanizeFetchError(null, {
+              status: res.status,
+              apiMessage: typeof data.error === 'string' ? data.error : undefined,
+              fallback: 'Could not load this chat.',
+            })
+          )
+          setLoadingThread(false)
+          return
+        }
         if (data.success && Array.isArray(data.messages)) {
           setLoadedMessages(dbMessagesToUIMessages(data.messages))
         } else {
           setLoadedMessages([])
         }
-      })
-      .catch(() => {
-        if (!cancelled) setLoadedMessages([])
-      })
+      } catch (e) {
+        if (!cancelled) {
+          setThreadError(humanizeFetchError(e, { fallback: 'Could not load this chat.' }))
+        }
+      } finally {
+        if (!cancelled) setLoadingThread(false)
+      }
+    })()
     return () => {
       cancelled = true
     }
-  }, [currentChatId])
+  }, [currentChatId, messagesRetryKey])
 
   function persistLastChatId(chatId: string | null) {
     try {
@@ -634,7 +668,7 @@ export default function CoverLetterTab() {
       persistLastChatId(chat.id)
       setJobLinkForNewChat('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create chat')
+      setError(humanizeFetchError(e, { fallback: 'Failed to create chat.' }))
     }
   }
 
@@ -961,24 +995,50 @@ export default function CoverLetterTab() {
       )}
 
       <div className="cover-letter-main">
-        {!currentChatId ? (
-          <div className="cover-letter-empty">
-            <h2 className="cover-letter-title">Cover letter</h2>
-            <p className="cover-letter-hint">
-              Select a chat from history or start a new one.
-            </p>
-          </div>
-        ) : loadedMessages === null ? (
-          <div className="cover-letter-loading-wrap">
-            <p className="cover-letter-loading">Loading…</p>
-          </div>
+        {chatsListError && !loadingChats ? (
+          <AppErrorState
+            message={chatsListError}
+            onRetry={() => void loadChats()}
+            className="my-auto max-w-lg mx-auto w-full"
+          />
+        ) : loadingChats && !currentChatId ? (
+          <AppLoadingBlock message="Loading chats…" className="my-auto max-w-md mx-auto w-full" />
+        ) : !currentChatId ? (
+          <AppEmptyState
+            icon={<MessageSquare className="h-8 w-8 opacity-70" aria-hidden />}
+            title="Cover letter"
+            description="Start a new chat to draft with context from a saved job, or open History to continue a previous thread."
+            primaryAction={{ label: 'New chat', onClick: () => void handleNewChat() }}
+            secondaryAction={{
+              label: 'Open history',
+              onClick: () => setHistoryDrawerOpen(true),
+            }}
+            className="my-auto max-w-lg mx-auto w-full"
+          />
+        ) : loadingThread ? (
+          <AppLoadingBlock message="Loading conversation…" className="my-auto max-w-md mx-auto w-full" />
+        ) : threadError ? (
+          <AppErrorState
+            message={threadError}
+            onRetry={() => {
+              setThreadError(null)
+              setMessagesRetryKey((k) => k + 1)
+            }}
+            className="my-auto max-w-lg mx-auto w-full"
+          />
         ) : (
           <>
-            {error && <p className="jobs-error">{error}</p>}
+            {error && (
+              <AppErrorState
+                message={error}
+                onDismiss={() => setError(null)}
+                className="mb-3 shrink-0"
+              />
+            )}
             <CoverLetterChatView
               key={currentChatId}
               chatId={currentChatId}
-              initialMessages={loadedMessages}
+              initialMessages={loadedMessages ?? []}
               onError={setError}
               onClearError={() => setError(null)}
               onLatestAssistantText={onLatestAssistantText}

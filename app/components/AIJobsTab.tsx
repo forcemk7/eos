@@ -20,6 +20,7 @@ import {
 } from '@/app/components/jobs'
 import type { JobSearchAnchor } from '@/lib/jobs/jobSearchAnchor'
 import { recommendedJobsPage } from '@/lib/navCopy'
+import { humanizeFetchError } from '@/lib/humanizeFetchError'
 
 export type { DiscoverListing, DiscoverListingWithApply }
 
@@ -126,7 +127,7 @@ export default function AIJobsTab({
         setHasMore(batch.length > 0)
       } catch (e) {
         if (!append) {
-          setAiError(e instanceof Error ? e.message : 'Failed to load')
+          setAiError(humanizeFetchError(e, { fallback: 'Failed to load listings.' }))
           setAiListings([])
         }
       } finally {

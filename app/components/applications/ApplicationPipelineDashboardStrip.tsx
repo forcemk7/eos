@@ -8,6 +8,8 @@ import {
   resolveDisplayStage,
 } from '@/lib/jobs/pipelineTaxonomy'
 import { cn } from '@/lib/utils'
+import { AppLoadingBlock, AppErrorState } from '@/app/components/shell'
+import { humanizeFetchError } from '@/lib/humanizeFetchError'
 
 function summarizeApplied(listings: JobListingRow[]) {
   let progress = 0
@@ -52,10 +54,18 @@ export function ApplicationPipelineDashboardStrip({
         setListings([])
         return
       }
-      if (!res.ok) throw new Error(data.error || 'Failed to load')
+      if (!res.ok) {
+        throw new Error(
+          humanizeFetchError(null, {
+            status: res.status,
+            apiMessage: typeof data.error === 'string' ? data.error : undefined,
+            fallback: 'Failed to load pipeline snapshot.',
+          })
+        )
+      }
       setListings(data.listings ?? [])
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load')
+      setError(humanizeFetchError(e, { fallback: 'Failed to load pipeline snapshot.' }))
       setListings([])
     } finally {
       setLoading(false)
@@ -95,8 +105,14 @@ export function ApplicationPipelineDashboardStrip({
           Open log
         </button>
       </div>
-      {loading && <p className="mt-2 text-xs text-muted-foreground">Loading…</p>}
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      {loading && (
+        <AppLoadingBlock message="Loading snapshot…" className="mt-2 py-3 text-xs" />
+      )}
+      {error && (
+        <div className="mt-2">
+          <AppErrorState message={error} onRetry={() => void load()} className="py-3" />
+        </div>
+      )}
       {!loading && !error && total === 0 && (
         <p className="mt-2 text-xs text-muted-foreground">No applications logged yet. Apply from Job Board or log off-platform roles.</p>
       )}

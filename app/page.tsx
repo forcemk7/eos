@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import AuthForm from './components/AuthForm'
@@ -25,6 +25,8 @@ import type {
   ResumeVersionTailoring,
   TailorResumeSession,
 } from '@/lib/resumeTailoring'
+import { getDataIncompleteCount, getOrderedSetupActions, type SetupAction } from '@/lib/profileCompleteness'
+import type { DataSectionId } from '@/lib/dataSection'
 
 interface ResumeVersion {
   id: string
@@ -43,6 +45,7 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>('dashboard')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [dataIncompleteCount, setDataIncompleteCount] = useState(0)
+  const [dataSectionFocus, setDataSectionFocus] = useState<DataSectionId | null>(null)
   const [tailorSession, setTailorSession] = useState<TailorResumeSession | null>(null)
   const [focusListingRequest, setFocusListingRequest] = useState<{
     stable_external_id: string
@@ -53,10 +56,37 @@ export default function Home() {
   const handleNavigate = useCallback((t: Tab) => {
     setTab(t)
     setSheetOpen(false)
+    if (t === 'data') setDataSectionFocus(null)
   }, [])
 
   const resumeIncompleteCount = current ? 0 : 1
   const totalIncomplete = dataIncompleteCount + resumeIncompleteCount
+
+  const setupActions = useMemo(
+    () => getOrderedSetupActions(current?.parsed_data ?? null, Boolean(current)),
+    [current]
+  )
+
+  const consumeDataSectionFocus = useCallback(() => setDataSectionFocus(null), [])
+
+  const navigateToSetupAction = useCallback((action: SetupAction) => {
+    if (action.tab === 'data' && action.dataSection) setDataSectionFocus(action.dataSection)
+    else setDataSectionFocus(null)
+    setTab(action.tab as Tab)
+    setSheetOpen(false)
+  }, [])
+
+  const firstSetupAction = setupActions[0]
+
+  const navigateToFirstIncomplete = useCallback(() => {
+    if (firstSetupAction) navigateToSetupAction(firstSetupAction)
+    else setTab('data')
+  }, [firstSetupAction, navigateToSetupAction])
+
+  useEffect(() => {
+    if (tab === 'data') return
+    setDataIncompleteCount(getDataIncompleteCount(current?.parsed_data ?? null))
+  }, [current, tab])
 
   useEffect(() => {
     let mounted = true
@@ -280,12 +310,14 @@ export default function Home() {
               <div className="dashboard-incomplete-strip" role="status">
                 <span className="dashboard-incomplete-text">
                   {totalIncomplete} item{totalIncomplete !== 1 ? 's' : ''} to complete
+                  {firstSetupAction ? (
+                    <>
+                      {' '}
+                      · Next: {firstSetupAction.missingItem.label}
+                    </>
+                  ) : null}
                 </span>
-                <button
-                  type="button"
-                  className="dashboard-incomplete-view"
-                  onClick={() => setTab(dataIncompleteCount >= resumeIncompleteCount ? 'data' : 'resume')}
-                >
+                <button type="button" className="dashboard-incomplete-view" onClick={navigateToFirstIncomplete}>
                   View
                 </button>
               </div>
@@ -299,7 +331,10 @@ export default function Home() {
                 user={user}
                 onNavigate={handleNavigate}
                 totalIncomplete={totalIncomplete}
-                onViewIncomplete={() => setTab(dataIncompleteCount >= resumeIncompleteCount ? 'data' : 'resume')}
+                dataIncompleteCount={dataIncompleteCount}
+                resumeIncompleteCount={resumeIncompleteCount}
+                setupActions={setupActions}
+                onNavigateToSetupAction={navigateToSetupAction}
               />
             ) : tab === 'data' ? (
               <DataTab
@@ -307,6 +342,8 @@ export default function Home() {
                 onSave={(data) => handleSave(data)}
                 onDataChange={loadResume}
                 onCompletenessChange={setDataIncompleteCount}
+                focusSection={dataSectionFocus}
+                onFocusSectionConsumed={consumeDataSectionFocus}
               />
             ) : tab === 'jobs' ? (
               <JobsTab

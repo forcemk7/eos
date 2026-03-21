@@ -19,6 +19,7 @@ import {
 } from '@/app/components/jobs'
 import { ExternalJobSheet } from '@/app/components/jobs/ExternalJobSheet'
 import { jobBoardPage } from '@/lib/navCopy'
+import { humanizeFetchError } from '@/lib/humanizeFetchError'
 
 export type { DiscoverListing, DiscoverListingWithApply }
 
@@ -170,7 +171,7 @@ export default function JobsTab({
         setHasSearched(true)
       } catch (e) {
         if (!append) {
-          setError(e instanceof Error ? e.message : 'Failed to load')
+          setError(humanizeFetchError(e, { fallback: 'Failed to load listings.' }))
           setListings([])
         }
         setHasSearched(true)
