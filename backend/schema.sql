@@ -633,6 +633,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_qualifications' AND column_name = 'pinned_role_key') THEN
     ALTER TABLE job_qualifications ADD COLUMN pinned_role_key TEXT;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'job_qualifications' AND column_name = 'candidate_readout') THEN
+    ALTER TABLE job_qualifications ADD COLUMN candidate_readout JSONB;
+  END IF;
 END $$;
 
 DO $$ BEGIN

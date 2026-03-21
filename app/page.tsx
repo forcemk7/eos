@@ -329,6 +329,12 @@ export default function Home() {
                   versions={versions}
                   onSave={(data) => handleSave(data)}
                   onRestore={handleRestore}
+                  resumeSourceId={current.id ?? 'profile'}
+                  currentTailoring={
+                    current.id && current.id !== 'profile'
+                      ? versions.find((v) => v.id === current.id)?.tailoring ?? null
+                      : null
+                  }
                   tailorSession={tailorSession}
                   onDismissTailor={() => setTailorSession(null)}
                   onOpenJobPosting={(url) => window.open(url, '_blank', 'noopener,noreferrer')}

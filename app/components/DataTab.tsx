@@ -522,7 +522,7 @@ export default function DataTab({
         )}
       </section>
 
-      <TargetProfilePanel hasData={hasData} refreshKey={targetProfileRefreshKey} />
+      <TargetProfilePanel hasData={hasData} refreshKey={targetProfileRefreshKey} profileData={hasData ? data : null} />
 
       <section className="data-content panel">
         <div className="data-content-head">

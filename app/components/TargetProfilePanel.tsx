@@ -1,8 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import type { ResumeData } from '@/lib/profile'
 import type { JobSearchAnchor, TargetRoleRow, TargetSectorRow } from '@/lib/jobs/jobSearchAnchor'
+import type { CandidateReadout } from '@/lib/jobs/candidateReadout'
 import { normalizeTargetKey } from '@/lib/jobs/targetProfileTypes'
+import CandidateReadoutBlock from '@/app/components/CandidateReadoutBlock'
 
 interface JobQualificationsRow {
   search_query: string
@@ -15,6 +18,8 @@ interface QualificationsPayload {
   success: boolean
   qualifications: JobQualificationsRow | null
   stale?: boolean
+  readout_stale?: boolean
+  candidate_readout?: CandidateReadout | null
   target_roles?: TargetRoleRow[]
   target_sectors?: TargetSectorRow[]
   dismissed_role_keys?: string[]
@@ -35,14 +40,18 @@ type PatchAction =
 export default function TargetProfilePanel({
   hasData,
   refreshKey,
+  profileData,
 }: {
   hasData: boolean
   refreshKey: number
+  profileData: ResumeData | null
 }) {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [stale, setStale] = useState(false)
+  const [readoutStale, setReadoutStale] = useState(false)
+  const [candidateReadout, setCandidateReadout] = useState<CandidateReadout | null>(null)
   const [qualifications, setQualifications] = useState<JobQualificationsRow | null>(null)
   const [roles, setRoles] = useState<TargetRoleRow[]>([])
   const [sectors, setSectors] = useState<TargetSectorRow[]>([])
@@ -62,9 +71,13 @@ export default function TargetProfilePanel({
         setQualifications(null)
         setRoles([])
         setSectors([])
+        setCandidateReadout(null)
+        setReadoutStale(false)
         return
       }
       setStale(Boolean(data.stale))
+      setReadoutStale(Boolean(data.readout_stale))
+      setCandidateReadout(data.candidate_readout ?? null)
       setQualifications(data.qualifications)
       setRoles(data.target_roles ?? [])
       setSectors(data.target_sectors ?? [])
@@ -75,6 +88,8 @@ export default function TargetProfilePanel({
       )
     } catch {
       setError('Could not load target profile.')
+      setCandidateReadout(null)
+      setReadoutStale(false)
     } finally {
       setLoading(false)
     }
@@ -100,6 +115,8 @@ export default function TargetProfilePanel({
         return
       }
       setStale(Boolean(data.stale))
+      setReadoutStale(Boolean(data.readout_stale))
+      setCandidateReadout(data.candidate_readout ?? null)
       setQualifications(data.qualifications)
       setRoles(data.target_roles ?? [])
       setSectors(data.target_sectors ?? [])
@@ -126,6 +143,8 @@ export default function TargetProfilePanel({
         return
       }
       setStale(Boolean(data.stale))
+      setReadoutStale(Boolean(data.readout_stale))
+      setCandidateReadout(data.candidate_readout ?? null)
       setQualifications(data.qualifications)
       setRoles(data.target_roles ?? [])
       setSectors(data.target_sectors ?? [])
@@ -186,6 +205,21 @@ export default function TargetProfilePanel({
         <p className="m-0 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90">
           Your profile changed since these targets were generated. Regenerate to refresh recommendations.
         </p>
+      )}
+
+      {hasData && !loading && (
+        <CandidateReadoutBlock
+          heading="How your data reads"
+          hint="Archetypes and tags inferred from your stored profile — the same record used for search and matching."
+          readout={candidateReadout}
+          readoutStale={readoutStale}
+          profileData={profileData}
+          emptyMessage={
+            qualifications
+              ? 'No readout yet for this snapshot. Click Regenerate above to refresh targets and this view.'
+              : undefined
+          }
+        />
       )}
 
       {hasData && !loading && qualifications && (

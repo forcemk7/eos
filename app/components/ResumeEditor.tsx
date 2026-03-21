@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { AppShell } from '@/app/components/shell'
 import { exportResumeToPdf } from '@/lib/exportResumePdf'
 import { applyResumeSuggestion, type ResumeSuggestion } from '@/lib/applyResumeSuggestion'
@@ -8,6 +8,11 @@ import ResumePreview, { TEMPLATE_IDS, type TemplateId } from './ResumePreview'
 import type { ResumeData } from '@/lib/profile'
 import { normalizedResumeData, genId } from '@/lib/profile'
 import type { ResumeVersionTailoring, TailorResumeSession } from '@/lib/resumeTailoring'
+import type { CandidateReadout, ArtifactReadoutResponse } from '@/lib/jobs/candidateReadout'
+import { readoutArchetypeKeySet, readoutTagKeySet } from '@/lib/jobs/candidateReadout'
+import { normalizeTargetKey } from '@/lib/jobs/targetProfileTypes'
+import { archetypeLabel, type ArchetypeSlug } from '@/lib/jobs/archetypeTaxonomy'
+import CandidateReadoutBlock from '@/app/components/CandidateReadoutBlock'
 
 export type { ResumeData }
 
@@ -54,6 +59,9 @@ interface ResumeEditorProps {
   versions: VersionItem[]
   onSave: (data: ResumeData) => Promise<void>
   onRestore: (versionId: string) => Promise<void>
+  /** `profile` when editor reflects live server profile; UUID after restoring a historical version. */
+  resumeSourceId: string
+  currentTailoring?: ResumeVersionTailoring | null
   tailorSession?: TailorResumeSession | null
   onDismissTailor?: () => void
   onOpenJobPosting?: (url: string) => void
@@ -65,6 +73,8 @@ export default function ResumeEditor({
   versions,
   onSave,
   onRestore,
+  resumeSourceId,
+  currentTailoring = null,
   tailorSession,
   onDismissTailor,
   onOpenJobPosting,
@@ -76,10 +86,64 @@ export default function ResumeEditor({
   const [suggestions, setSuggestions] = useState<ResumeSuggestion[]>([])
   const [suggestLoading, setSuggestLoading] = useState(true)
   const [activeTemplate, setActiveTemplate] = useState<TemplateId>('classic')
+  const [dataReadout, setDataReadout] = useState<CandidateReadout | null>(null)
+  const [artifactReadout, setArtifactReadout] = useState<ArtifactReadoutResponse | null>(null)
+  const [readoutLoading, setReadoutLoading] = useState(false)
+  const [readoutError, setReadoutError] = useState<string | null>(null)
+  const [lastReadoutSerialized, setLastReadoutSerialized] = useState<string | null>(null)
 
   useEffect(() => {
     setData(normalizedResumeData(initialData))
   }, [initialData])
+
+  const dataSerialized = useMemo(() => JSON.stringify(normalizedResumeData(data)), [data])
+  const readoutDirty =
+    Boolean(artifactReadout && lastReadoutSerialized !== null && lastReadoutSerialized !== dataSerialized)
+
+  const loadDataReadout = useCallback(async () => {
+    try {
+      const res = await fetch('/api/jobs/qualifications', { credentials: 'include' })
+      const j = (await res.json()) as {
+        success?: boolean
+        candidate_readout?: CandidateReadout | null
+      }
+      if (res.ok && j.success) setDataReadout(j.candidate_readout ?? null)
+    } catch {
+      // ignore — comparison strip optional
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadDataReadout()
+  }, [loadDataReadout, initialData])
+
+  async function refreshArtifactReadout() {
+    setReadoutLoading(true)
+    setReadoutError(null)
+    try {
+      const res = await fetch('/api/resume/readout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ parsed: data }),
+      })
+      const j = (await res.json()) as {
+        success?: boolean
+        readout?: ArtifactReadoutResponse
+        error?: string
+      }
+      if (!res.ok || !j.success || !j.readout) {
+        setReadoutError(j.error || 'Could not generate readout.')
+        return
+      }
+      setArtifactReadout(j.readout)
+      setLastReadoutSerialized(JSON.stringify(normalizedResumeData(data)))
+    } catch {
+      setReadoutError('Could not generate readout.')
+    } finally {
+      setReadoutLoading(false)
+    }
+  }
 
   // Auto-fetch suggestions when editor loads or data is restored (JD-aware when tailoring)
   useEffect(() => {
@@ -258,6 +322,35 @@ export default function ResumeEditor({
     }
   }
 
+  const archetypeDiff = useMemo(() => {
+    if (!dataReadout || !artifactReadout) return null
+    const d = readoutArchetypeKeySet(dataReadout)
+    const r = readoutArchetypeKeySet(artifactReadout)
+    return {
+      onlyData: [...d].filter((x) => !r.has(x)),
+      onlyResume: [...r].filter((x) => !d.has(x)),
+      shared: [...d].filter((x) => r.has(x)),
+    }
+  }, [dataReadout, artifactReadout])
+
+  const tagDiff = useMemo(() => {
+    if (!dataReadout || !artifactReadout) return null
+    const dk = readoutTagKeySet(dataReadout)
+    const rk = readoutTagKeySet(artifactReadout)
+    const onlyData = dataReadout.tags.filter((t) => !rk.has(normalizeTargetKey(t.key)))
+    const onlyResume = artifactReadout.tags.filter((t) => !dk.has(normalizeTargetKey(t.key)))
+    const sharedKeys = [...dk].filter((k) => rk.has(k))
+    const sharedLabels = sharedKeys
+      .map((k) => {
+        const a = dataReadout.tags.find((t) => normalizeTargetKey(t.key) === k)
+        return a?.label ?? k
+      })
+      .filter(Boolean)
+    return { onlyData, onlyResume, sharedLabels }
+  }, [dataReadout, artifactReadout])
+
+  const tailoredContext = Boolean(tailorSession || currentTailoring)
+
   return (
     <AppShell variant="wide">
     <div className="resume-editor-layout">
@@ -319,6 +412,128 @@ export default function ResumeEditor({
             </div>
           </div>
         )}
+
+        <section className="resume-readout panel mb-4 rounded-lg border border-border bg-card/20 px-4 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="resume-section-title m-0 text-base">How this resume reads</h2>
+              <p className="m-0 mt-1 text-sm text-muted-foreground">
+                On-demand archetypes and tags for this document. Refresh after edits; compare with your Data tab
+                readout.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="primary-button shrink-0"
+              disabled={readoutLoading}
+              onClick={() => void refreshArtifactReadout()}
+            >
+              {readoutLoading ? 'Refreshing…' : 'Refresh readout'}
+            </button>
+          </div>
+
+          {resumeSourceId !== 'profile' && (
+            <p className="m-0 mt-3 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90">
+              You&apos;re editing a restored version that isn&apos;t saved to your profile yet. Save to sync this
+              content with Data — until then, recruiters see a different &quot;packet&quot; than what&apos;s stored.
+            </p>
+          )}
+
+          {tailoredContext && (
+            <p className="m-0 mt-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm text-foreground/90">
+              Job-tailoring context is active or this row was saved for a listing. Some differences vs Data can be
+              intentional repositioning.
+            </p>
+          )}
+
+          {readoutError && (
+            <p className="m-0 mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {readoutError}
+            </p>
+          )}
+
+          {readoutDirty && (
+            <p className="m-0 mt-3 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-200/90">
+              Resume text changed since the last readout. Refresh to update labels.
+            </p>
+          )}
+
+          {artifactReadout && (
+            <CandidateReadoutBlock
+              heading=""
+              readout={artifactReadout}
+              readoutStale={false}
+              profileData={data}
+              embedded
+            />
+          )}
+
+          {!artifactReadout && !readoutLoading && (
+            <p className="m-0 mt-3 text-sm text-muted-foreground">
+              Click <strong className="font-medium text-foreground/90">Refresh readout</strong> to label this resume.
+            </p>
+          )}
+
+          {artifactReadout && !dataReadout && (
+            <p className="m-0 mt-3 text-xs text-muted-foreground">
+              Regenerate your target profile on the Data tab to store a baseline &quot;how your data reads&quot; readout
+              for side-by-side comparison.
+            </p>
+          )}
+
+          {archetypeDiff && tagDiff && (archetypeDiff.onlyData.length > 0 || archetypeDiff.onlyResume.length > 0 || archetypeDiff.shared.length > 0 || tagDiff.onlyData.length > 0 || tagDiff.onlyResume.length > 0 || tagDiff.sharedLabels.length > 0) && (
+            <div className="mt-4 space-y-3 border-t border-border pt-4">
+              <h3 className="m-0 text-sm font-semibold text-foreground">Data vs this resume</h3>
+              <p className="m-0 text-xs text-muted-foreground">
+                Compared to the readout from your Data tab (regenerate targets there to refresh the baseline).
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                <div className="rounded-md border border-border/80 bg-muted/10 p-2.5">
+                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Shared</div>
+                  <ul className="m-0 mt-1 list-none space-y-1 p-0 text-muted-foreground">
+                    {archetypeDiff.shared.map((slug) => (
+                      <li key={slug}>{archetypeLabel(slug as ArchetypeSlug)}</li>
+                    ))}
+                    {tagDiff.sharedLabels.map((label) => (
+                      <li key={label}>Tag: {label}</li>
+                    ))}
+                    {archetypeDiff.shared.length === 0 && tagDiff.sharedLabels.length === 0 && (
+                      <li className="text-xs">—</li>
+                    )}
+                  </ul>
+                </div>
+                <div className="rounded-md border border-border/80 bg-muted/10 p-2.5">
+                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Data only</div>
+                  <ul className="m-0 mt-1 list-none space-y-1 p-0 text-muted-foreground">
+                    {archetypeDiff.onlyData.map((slug) => (
+                      <li key={slug}>{archetypeLabel(slug as ArchetypeSlug)}</li>
+                    ))}
+                    {tagDiff.onlyData.map((t) => (
+                      <li key={t.id}>Tag: {t.label}</li>
+                    ))}
+                    {archetypeDiff.onlyData.length === 0 && tagDiff.onlyData.length === 0 && (
+                      <li className="text-xs">—</li>
+                    )}
+                  </ul>
+                </div>
+                <div className="rounded-md border border-border/80 bg-muted/10 p-2.5">
+                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Resume only</div>
+                  <ul className="m-0 mt-1 list-none space-y-1 p-0 text-muted-foreground">
+                    {archetypeDiff.onlyResume.map((slug) => (
+                      <li key={slug}>{archetypeLabel(slug as ArchetypeSlug)}</li>
+                    ))}
+                    {tagDiff.onlyResume.map((t) => (
+                      <li key={t.id}>Tag: {t.label}</li>
+                    ))}
+                    {archetypeDiff.onlyResume.length === 0 && tagDiff.onlyResume.length === 0 && (
+                      <li className="text-xs">—</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
 
         <section className="resume-section">
           <h2 className="resume-section-title">Contact</h2>

@@ -17,6 +17,16 @@ import {
   type JobQualificationsDbRow,
 } from '@/lib/jobs/jobSearchAnchor'
 import { normalizeTargetKey } from '@/lib/jobs/targetProfileTypes'
+import { listArchetypesForPrompt } from '@/lib/jobs/archetypeTaxonomy'
+import {
+  candidateReadoutJsonSchemaSnippet,
+  candidateReadoutRulesForPrompt,
+  parseCandidateReadoutFromParsedJson,
+  parseCandidateReadoutDb,
+  serializeCandidateReadoutForDb,
+  fallbackCandidateReadout,
+  type CandidateReadout,
+} from '@/lib/jobs/candidateReadout'
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -29,7 +39,7 @@ export interface JobQualificationsRow {
   generated_at: string
 }
 
-const TARGET_SYSTEM_PROMPT = `You output JSON only. Given a candidate profile, recommend target job roles and industry sectors they should hunt JDs for, including reasonable stretch or adjacent roles.
+const TARGET_SYSTEM_PROMPT = `You output JSON only. Given a candidate profile, recommend target job roles and industry sectors they should hunt JDs for, including reasonable stretch or adjacent roles. Also classify how the raw profile data would be bucketed (archetypes + short tags tied to evidence paths).
 
 Output exactly this JSON shape, no other text:
 {
@@ -40,8 +50,13 @@ Output exactly this JSON shape, no other text:
     { "name": string, "rationale": string }
   ],
   "location": string | null,
-  "remote": boolean
+  "remote": boolean${candidateReadoutJsonSchemaSnippet()}
 }
+
+Allowed archetype slugs for candidate_readout (use exactly these string values for primary_archetype and secondary_archetypes):
+${listArchetypesForPrompt()}
+
+${candidateReadoutRulesForPrompt()}
 
 Rules:
 - roles: 3 to 6 items. Each rationale: 1–3 short sentences explaining why this role fits the profile (reference experience, skills, or education when relevant).
@@ -74,7 +89,7 @@ function computeSearchQueryFromRoles(
   return sanitizeSearchTerms(roles[0].search_terms)
 }
 
-function parseLLMTargets(content: string | null): {
+function parseLLMTargetsFromObject(parsed: Record<string, unknown>): {
   roles: Omit<TargetRoleRow, 'id'>[]
   sectors: Omit<TargetSectorRow, 'id'>[]
   location: string | null
@@ -86,53 +101,43 @@ function parseLLMTargets(content: string | null): {
     location: null as string | null,
     remote: true,
   }
-  if (!content) return empty
-  try {
-    const parsed = JSON.parse(content) as Record<string, unknown>
-    const rawRoles = Array.isArray(parsed.roles) ? parsed.roles : []
-    const rawSectors = Array.isArray(parsed.sectors) ? parsed.sectors : []
-    const roles: Omit<TargetRoleRow, 'id'>[] = []
-    for (const item of rawRoles.slice(0, 8)) {
-      if (!item || typeof item !== 'object') continue
-      const o = item as Record<string, unknown>
-      const title = typeof o.title === 'string' ? o.title.trim() : ''
-      const rationale = typeof o.rationale === 'string' ? o.rationale.trim() : ''
-      const search_terms = typeof o.search_terms === 'string' ? o.search_terms.trim() : ''
-      if (!title || !rationale) continue
-      roles.push({
-        title,
-        rationale,
-        search_terms: search_terms || title,
-        stretch: typeof o.stretch === 'boolean' ? o.stretch : false,
-      })
-    }
-    while (roles.length > 6) roles.pop()
-    while (roles.length < 3 && roles.length > 0) {
-      /* keep as-is if LLM returned fewer than 3 */
-      break
-    }
-
-    const sectors: Omit<TargetSectorRow, 'id'>[] = []
-    for (const item of rawSectors.slice(0, 8)) {
-      if (!item || typeof item !== 'object') continue
-      const o = item as Record<string, unknown>
-      const name = typeof o.name === 'string' ? o.name.trim() : ''
-      const rationale = typeof o.rationale === 'string' ? o.rationale.trim() : ''
-      if (!name || !rationale) continue
-      sectors.push({ name, rationale })
-    }
-    while (sectors.length > 5) sectors.pop()
-
-    let location: string | null = null
-    if (parsed.location === null || typeof parsed.location === 'string') {
-      location = parsed.location === null ? null : (parsed.location as string).trim() || null
-    }
-    const remote = typeof parsed.remote === 'boolean' ? parsed.remote : true
-
-    return { roles, sectors, location, remote }
-  } catch {
-    return empty
+  const rawRoles = Array.isArray(parsed.roles) ? parsed.roles : []
+  const rawSectors = Array.isArray(parsed.sectors) ? parsed.sectors : []
+  const roles: Omit<TargetRoleRow, 'id'>[] = []
+  for (const item of rawRoles.slice(0, 8)) {
+    if (!item || typeof item !== 'object') continue
+    const o = item as Record<string, unknown>
+    const title = typeof o.title === 'string' ? o.title.trim() : ''
+    const rationale = typeof o.rationale === 'string' ? o.rationale.trim() : ''
+    const search_terms = typeof o.search_terms === 'string' ? o.search_terms.trim() : ''
+    if (!title || !rationale) continue
+    roles.push({
+      title,
+      rationale,
+      search_terms: search_terms || title,
+      stretch: typeof o.stretch === 'boolean' ? o.stretch : false,
+    })
   }
+  while (roles.length > 6) roles.pop()
+
+  const sectors: Omit<TargetSectorRow, 'id'>[] = []
+  for (const item of rawSectors.slice(0, 8)) {
+    if (!item || typeof item !== 'object') continue
+    const o = item as Record<string, unknown>
+    const name = typeof o.name === 'string' ? o.name.trim() : ''
+    const rationale = typeof o.rationale === 'string' ? o.rationale.trim() : ''
+    if (!name || !rationale) continue
+    sectors.push({ name, rationale })
+  }
+  while (sectors.length > 5) sectors.pop()
+
+  let location: string | null = null
+  if (parsed.location === null || typeof parsed.location === 'string') {
+    location = parsed.location === null ? null : (parsed.location as string).trim() || null
+  }
+  const remote = typeof parsed.remote === 'boolean' ? parsed.remote : true
+
+  return { roles, sectors, location, remote }
 }
 
 function assignIds(
@@ -162,6 +167,8 @@ async function buildGetPayload(
       success: true as const,
       qualifications: null,
       stale: false,
+      readout_stale: false,
+      candidate_readout: null as CandidateReadout | null,
       target_roles: [] as TargetRoleRow[],
       target_sectors: [] as TargetSectorRow[],
       dismissed_role_keys: [] as string[],
@@ -179,6 +186,9 @@ async function buildGetPayload(
   const profile_as_of = typeof row.profile_as_of === 'string' ? row.profile_as_of : null
   const stale = Boolean(profileUpdated && profile_as_of && profileUpdated > profile_as_of)
 
+  const candidate_readout = parseCandidateReadoutDb(row.candidate_readout)
+  const readout_stale = !candidate_readout || stale
+
   const qualifications: JobQualificationsRow = {
     search_query: typeof row.search_query === 'string' ? row.search_query : 'jobs',
     location: typeof row.location === 'string' ? row.location : null,
@@ -190,6 +200,8 @@ async function buildGetPayload(
     success: true as const,
     qualifications,
     stale,
+    readout_stale,
+    candidate_readout,
     target_roles: filterRolesByDismissed(allRoles, dismissedRoleKeys),
     target_sectors: filterSectorsByDismissed(allSectors, dismissedSectorKeys),
     dismissed_role_keys: dismissedRoleKeys,
@@ -210,7 +222,7 @@ export async function GET(req: NextRequest) {
     const { data: row, error } = await supabase
       .from('job_qualifications')
       .select(
-        'search_query, location, remote, generated_at, target_roles, target_sectors, profile_as_of, dismissed_role_keys, dismissed_sector_keys, pinned_role_key'
+        'search_query, location, remote, generated_at, target_roles, target_sectors, profile_as_of, dismissed_role_keys, dismissed_sector_keys, pinned_role_key, candidate_readout'
       )
       .eq('user_id', user.id)
       .maybeSingle()
@@ -285,7 +297,13 @@ export async function POST(req: NextRequest) {
     })
 
     const content = response.choices[0]?.message?.content
-    let { roles: rawRoles, sectors: rawSectors, location, remote } = parseLLMTargets(content ?? null)
+    let parsedRoot: Record<string, unknown> = {}
+    try {
+      if (content) parsedRoot = JSON.parse(content) as Record<string, unknown>
+    } catch {
+      parsedRoot = {}
+    }
+    let { roles: rawRoles, sectors: rawSectors, location, remote } = parseLLMTargetsFromObject(parsedRoot)
 
     if (rawRoles.length === 0) {
       rawRoles = [
@@ -312,6 +330,13 @@ export async function POST(req: NextRequest) {
     const search_query = computeSearchQueryFromRoles(withIds, pinned_role_key)
     const generated_at = new Date().toISOString()
 
+    let candidate_readout = parseCandidateReadoutFromParsedJson(parsedRoot, profile_as_of, generated_at)
+    if (candidate_readout.tags.length === 0) {
+      candidate_readout = fallbackCandidateReadout(profile_as_of, generated_at)
+    } else if (!candidate_readout.primary_archetype) {
+      candidate_readout = { ...candidate_readout, primary_archetype: 'generalist' }
+    }
+
     const { error: upsertError } = await supabase.from('job_qualifications').upsert(
       {
         user_id: user.id,
@@ -325,6 +350,7 @@ export async function POST(req: NextRequest) {
         dismissed_role_keys: dismissedRoleKeys,
         dismissed_sector_keys: dismissedSectorKeys,
         pinned_role_key,
+        candidate_readout: serializeCandidateReadoutForDb(candidate_readout),
       },
       { onConflict: 'user_id' }
     )
@@ -337,7 +363,7 @@ export async function POST(req: NextRequest) {
     const { data: row } = await supabase
       .from('job_qualifications')
       .select(
-        'search_query, location, remote, generated_at, target_roles, target_sectors, profile_as_of, dismissed_role_keys, dismissed_sector_keys, pinned_role_key'
+        'search_query, location, remote, generated_at, target_roles, target_sectors, profile_as_of, dismissed_role_keys, dismissed_sector_keys, pinned_role_key, candidate_readout'
       )
       .eq('user_id', user.id)
       .single()
@@ -387,7 +413,7 @@ export async function PATCH(req: NextRequest) {
     const { data: row, error: fetchError } = await supabase
       .from('job_qualifications')
       .select(
-        'search_query, location, remote, generated_at, target_roles, target_sectors, profile_as_of, dismissed_role_keys, dismissed_sector_keys, pinned_role_key'
+        'search_query, location, remote, generated_at, target_roles, target_sectors, profile_as_of, dismissed_role_keys, dismissed_sector_keys, pinned_role_key, candidate_readout'
       )
       .eq('user_id', user.id)
       .maybeSingle()
@@ -447,7 +473,7 @@ export async function PATCH(req: NextRequest) {
     const { data: nextRow } = await supabase
       .from('job_qualifications')
       .select(
-        'search_query, location, remote, generated_at, target_roles, target_sectors, profile_as_of, dismissed_role_keys, dismissed_sector_keys, pinned_role_key'
+        'search_query, location, remote, generated_at, target_roles, target_sectors, profile_as_of, dismissed_role_keys, dismissed_sector_keys, pinned_role_key, candidate_readout'
       )
       .eq('user_id', user.id)
       .single()
