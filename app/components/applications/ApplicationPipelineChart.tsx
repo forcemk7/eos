@@ -1,9 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTheme } from 'next-themes'
 import { sankey as d3Sankey, sankeyLeft, sankeyLinkHorizontal } from 'd3-sankey'
 import type { SankeyNode, SankeyLink } from 'd3-sankey'
 import type { JobListingRow } from '@/lib/jobs/jobListingRow'
+import type { PipelineColorMode } from '@/lib/jobs/pipelineTaxonomy'
 import { buildSankeyGraph } from '@/lib/jobs/sankeyPipeline'
 
 type StageNode = SankeyNode<Record<string, unknown>, Record<string, unknown>> & {
@@ -25,12 +27,16 @@ export function ApplicationPipelineChart({
   selectedStage: string | null
   className?: string
 }) {
+  const { resolvedTheme } = useTheme()
+  const colorMode: PipelineColorMode = resolvedTheme === 'light' ? 'light' : 'dark'
+  const linkStrokeOpacity = colorMode === 'light' ? 0.52 : 0.38
+
   const { layout, nodes, links } = useMemo(() => {
     if (listings.length === 0) {
       return { layout: null as ReturnType<ReturnType<typeof d3Sankey>> | null, nodes: [] as StageNode[], links: [] as StageLink[] }
     }
 
-    const { nodes: rawNodes, links: rawLinks } = buildSankeyGraph(listings)
+    const { nodes: rawNodes, links: rawLinks } = buildSankeyGraph(listings, { colorMode })
     if (rawLinks.length === 0) {
       return { layout: null, nodes: rawNodes as StageNode[], links: [] as StageLink[] }
     }
@@ -56,7 +62,7 @@ export function ApplicationPipelineChart({
       nodes: graph.nodes as StageNode[],
       links: graph.links as StageLink[],
     }
-  }, [listings])
+  }, [listings, colorMode])
 
   if (listings.length === 0 || !layout || links.length === 0) {
     return (
@@ -88,7 +94,7 @@ export function ApplicationPipelineChart({
                 d={path}
                 fill="none"
                 stroke={fill}
-                strokeOpacity={0.35}
+                strokeOpacity={linkStrokeOpacity}
                 strokeWidth={Math.max(1, link.width ?? 1)}
                 className="pointer-events-none"
               />

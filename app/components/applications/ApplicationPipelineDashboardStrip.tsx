@@ -84,7 +84,12 @@ export function ApplicationPipelineDashboardStrip({
     const parts = [
       { key: 'progress', count: progress, className: 'bg-teal-500', label: 'In progress' },
       { key: 'reject', count: reject, className: 'bg-rose-500', label: 'Rejected' },
-      { key: 'ghost', count: ghost, className: 'bg-slate-400', label: 'No reply' },
+      {
+        key: 'ghost',
+        count: ghost,
+        className: 'bg-slate-500 dark:bg-slate-400',
+        label: 'No reply',
+      },
       { key: 'neutral', count: neutral, className: 'bg-warning', label: 'Stage unset' },
     ].filter((p) => p.count > 0)
     const sum = parts.reduce((s, p) => s + p.count, 0) || 1

@@ -57,9 +57,9 @@ module.exports = {
         xl: "var(--radius-lg)",
       },
       boxShadow: {
-        eosCard: "0 2px 8px rgba(0, 0, 0, 0.3)",
-        eosPopover: "0 4px 12px rgba(0, 0, 0, 0.15)",
-        eosDrawer: "-4px 0 24px rgba(0, 0, 0, 0.15)",
+        eosCard: "var(--eos-shadow-card, 0 2px 8px rgba(0, 0, 0, 0.12))",
+        eosPopover: "var(--eos-shadow-popover)",
+        eosDrawer: "var(--eos-shadow-drawer)",
       },
     },
   },

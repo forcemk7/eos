@@ -4,7 +4,34 @@
 
 @layer base {
   :root {
-    /* shadcn semantic tokens (dark theme default) */
+    /* shadcn semantic tokens — light */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 38%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --radius: 0.5rem;
+    --radius-lg: 0.75rem;
+    --success: 142 71% 36%;
+    --success-foreground: 144 61% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 90% 12%;
+  }
+  .dark {
     --background: 222 47% 6%;
     --foreground: 213 31% 91%;
     --card: 214 32% 11%;
@@ -16,33 +43,11 @@
     --secondary: 214 32% 17%;
     --secondary-foreground: 213 31% 91%;
     --muted: 214 32% 17%;
-    --muted-foreground: 215 20% 45%;
+    --muted-foreground: 215 20% 58%;
     --accent: 214 32% 17%;
     --accent-foreground: 213 31% 91%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
-    --ring: 217 91% 60%;
-    --radius: 0.5rem;
-    --radius-lg: 0.75rem;
-    /* earnOS semantic status (HSL components for hsl() / alpha) */
-    --success: 142 71% 45%;
-    --success-foreground: 144 61% 98%;
-    --warning: 43 96% 56%;
-    --warning-foreground: 26 90% 12%;
-  }
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 213 31% 91%;
-    --card: 214 32% 11%;
-    --card-foreground: 213 31% 91%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --muted: 214 32% 17%;
-    --muted-foreground: 215 20% 45%;
-    --accent: 214 32% 17%;
-    --accent-foreground: 213 31% 91%;
     --border: 215 28% 17%;
     --input: 215 28% 17%;
     --ring: 217 91% 60%;
@@ -63,7 +68,35 @@
 }
 
 :root {
-  /* Legacy earnOS surfaces — eos-* avoids clobbering shadcn --border / --accent (HSL for Tailwind hsl(var(...))) */
+  /* Legacy earnOS surfaces — light */
+  --bg: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-input: #f8fafc;
+  --eos-border: rgba(15, 23, 42, 0.1);
+  --border-focus: rgba(37, 99, 235, 0.45);
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --eos-accent: #2563eb;
+  --eos-accent-hover: #1d4ed8;
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.08);
+  --content-max: 960px;
+  --eos-shadow-popover: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --eos-shadow-drawer: -4px 0 24px rgba(15, 23, 42, 0.1);
+  --eos-shadow-card: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --eos-hover-wash: color-mix(in srgb, hsl(var(--foreground)) 5%, transparent);
+  --eos-hover-wash-strong: color-mix(in srgb, hsl(var(--foreground)) 9%, transparent);
+  --eos-kanban-hover-border: color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
+  /* App layout tokens — mirror .app-content padding and AppShell gap; cover-letter uses pad-x when main has no padding */
+  --content-max-wide: 1200px;
+  --app-content-pad-x: 24px;
+  --app-content-pad-y-top: 32px;
+  --app-content-pad-y-bottom: 64px;
+  --app-shell-gap: 24px;
+}
+
+.dark {
   --bg: #0b0f13;
   --bg-card: #141a22;
   --bg-input: #0f1419;
@@ -76,24 +109,27 @@
   --eos-accent-hover: #60a5fa;
   --danger: #ef4444;
   --danger-bg: rgba(239, 68, 68, 0.1);
-  --content-max: 960px;
   --eos-shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.15);
   --eos-shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.15);
-  /* App layout tokens — mirror .app-content padding and AppShell gap; cover-letter uses pad-x when main has no padding */
-  --content-max-wide: 1200px;
-  --app-content-pad-x: 24px;
-  --app-content-pad-y-top: 32px;
-  --app-content-pad-y-bottom: 64px;
-  --app-shell-gap: 24px;
+  --eos-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --eos-hover-wash: color-mix(in srgb, hsl(var(--foreground)) 8%, transparent);
+  --eos-hover-wash-strong: color-mix(in srgb, hsl(var(--foreground)) 12%, transparent);
+  --eos-kanban-hover-border: color-mix(in srgb, hsl(var(--foreground)) 14%, transparent);
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
-  background: linear-gradient(180deg, var(--bg) 0%, #0f1419 100%);
+  background-color: hsl(var(--background));
+  background-image: linear-gradient(
+    180deg,
+    hsl(var(--background)) 0%,
+    color-mix(in srgb, hsl(var(--background)) 92%, hsl(var(--foreground)) 8%) 100%
+  );
   background-attachment: fixed;
-  color: var(--text);
+  color: hsl(var(--foreground));
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -300,12 +336,12 @@ html, body {
 
 .app-tab:hover:not(:disabled) {
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--eos-hover-wash);
 }
 
 .app-tab.active {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--eos-hover-wash-strong);
 }
 
 .app-tab-badge {
@@ -486,8 +522,8 @@ html, body {
 }
 
 .secondary-button:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--eos-hover-wash);
+  border-color: var(--eos-kanban-hover-border);
   color: var(--text);
 }
 
@@ -1137,7 +1173,7 @@ textarea::placeholder {
 
 .cover-letter-top-bar-btn:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--eos-hover-wash);
 }
 
 .cover-letter-top-bar-btn:disabled {
@@ -1319,11 +1355,11 @@ textarea::placeholder {
 }
 
 .cover-letter-chat-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--eos-hover-wash);
 }
 
 .cover-letter-chat-item.active {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--eos-hover-wash-strong);
 }
 
 .cover-letter-chat-item-title {
@@ -1369,7 +1405,7 @@ textarea::placeholder {
 
 .cover-letter-chat-menu-btn:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--eos-hover-wash);
 }
 
 .cover-letter-chat-menu {
@@ -1409,7 +1445,7 @@ textarea::placeholder {
 }
 
 .cover-letter-chat-menu-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--eos-hover-wash);
 }
 
 .cover-letter-chat-menu-item-delete {
@@ -1851,7 +1887,7 @@ textarea::placeholder {
 
 .jobs-add-tab.active {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--eos-hover-wash-strong);
 }
 
 .jobs-add-form {
@@ -2572,7 +2608,7 @@ textarea::placeholder {
 }
 .links-list-open:hover {
   color: var(--eos-accent);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--eos-hover-wash);
 }
 .links-remove {
   width: 28px;
@@ -3243,7 +3279,7 @@ textarea::placeholder {
 }
 
 .resume-version-item:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--eos-hover-wash);
 }
 
 .resume-version-meta {
@@ -3490,8 +3526,8 @@ textarea::placeholder {
 }
 
 .kanban-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-color: var(--eos-kanban-hover-border);
+  box-shadow: var(--eos-shadow-card);
 }
 
 .kanban-card.dragging {
@@ -3531,7 +3567,7 @@ textarea::placeholder {
 }
 
 .kanban-card-menu:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--eos-hover-wash);
   color: var(--text);
 }
 
@@ -3830,7 +3866,7 @@ textarea::placeholder {
 }
 
 .activity-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--eos-hover-wash);
 }
 
 .activity-row.expanded {

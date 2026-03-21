@@ -2,12 +2,13 @@ import type { JobListingRow } from '@/lib/jobs/jobListingRow'
 import {
   PIPELINE_CUSTOM_PREFIX,
   PIPELINE_FORWARD_STAGE_IDS,
-  PIPELINE_GROUP_COLORS,
   PIPELINE_POST_APPLY_STAGES,
+  SANKEY_EXTRA_COLORS,
+  type PipelineColorMode,
   isCustomPipelineStageId,
   pipelineStageColor,
   pipelineStageLabel,
-  preApplyStageGroup,
+  preApplySankeyFill,
   preApplyStageLabel,
   resolveDisplayStage,
 } from '@/lib/jobs/pipelineTaxonomy'
@@ -28,7 +29,12 @@ function countBy<T extends string>(items: T[]): Map<T, number> {
   return m
 }
 
-export function buildSankeyGraph(listings: JobListingRow[]) {
+export function buildSankeyGraph(
+  listings: JobListingRow[],
+  options?: { colorMode?: PipelineColorMode }
+) {
+  const colorMode: PipelineColorMode = options?.colorMode ?? 'dark'
+  const extra = SANKEY_EXTRA_COLORS[colorMode]
   const stages = listings.map((L) => resolveDisplayStage(L))
   const counts = countBy(stages)
 
@@ -53,49 +59,49 @@ export function buildSankeyGraph(listings: JobListingRow[]) {
 
   const links: SankeyGraphLink[] = []
 
-  const rootIdx = addNode('__root__', 'Tracked', '#64748b')
+  const rootIdx = addNode('__root__', 'Tracked', extra.root)
   let hasPre = false
   for (const pk of preKeys) {
     const c = counts.get(pk) ?? 0
     if (c <= 0) continue
     hasPre = true
-    const fill = pk === 'pre_skipped' ? '#71717a' : PIPELINE_GROUP_COLORS[preApplyStageGroup(pk)]
+    const fill = preApplySankeyFill(pk, colorMode)
     const idx = addNode(pk, preApplyStageLabel(pk), fill)
     links.push({ source: rootIdx, target: idx, value: c })
   }
 
   if (appliedTotal > 0) {
-    const appliedIdx = addNode(SANKEY_FILTER_ALL_APPLIED, 'Applied', '#10b981')
+    const appliedIdx = addNode(SANKEY_FILTER_ALL_APPLIED, 'Applied', extra.applied)
     links.push({ source: rootIdx, target: appliedIdx, value: appliedTotal })
 
     for (const pid of postSplitIds) {
       const c = counts.get(pid) ?? 0
       if (c <= 0) continue
-      const fill = pipelineStageColor(pid)
+      const fill = pipelineStageColor(pid, colorMode)
       const t = addNode(pid, pipelineStageLabel(pid), fill)
       links.push({ source: appliedIdx, target: t, value: c })
     }
 
     if (hubTotal > 0) {
-      const hubIdx = addNode(SANKEY_FILTER_IN_PROCESS_HUB, 'In progress', '#6366f1')
+      const hubIdx = addNode(SANKEY_FILTER_IN_PROCESS_HUB, 'In progress', extra.hub)
       links.push({ source: appliedIdx, target: hubIdx, value: hubTotal })
       for (const fid of forwardIds) {
         const c = counts.get(fid) ?? 0
         if (c <= 0) continue
-        const t = addNode(fid, pipelineStageLabel(fid), pipelineStageColor(fid))
+        const t = addNode(fid, pipelineStageLabel(fid), pipelineStageColor(fid, colorMode))
         links.push({ source: hubIdx, target: t, value: c })
       }
       for (const cid of customIds) {
         const c = counts.get(cid) ?? 0
         if (c <= 0) continue
-        const t = addNode(cid, cid.slice(PIPELINE_CUSTOM_PREFIX.length), pipelineStageColor(cid))
+        const t = addNode(cid, cid.slice(PIPELINE_CUSTOM_PREFIX.length), pipelineStageColor(cid, colorMode))
         links.push({ source: hubIdx, target: t, value: c })
       }
     }
   }
 
   if (!hasPre && appliedTotal <= 0 && listings.length > 0) {
-    const idx = addNode('pre_tracked', preApplyStageLabel('pre_tracked'), '#0ea5e9')
+    const idx = addNode('pre_tracked', preApplyStageLabel('pre_tracked'), extra.preTrackedFallback)
     links.push({ source: rootIdx, target: idx, value: listings.length })
   }
 

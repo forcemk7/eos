@@ -2,6 +2,7 @@
 
 import { Menu } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import { ThemeToggle } from '@/app/components/theme-toggle'
 import { navItemCopy, type NavTabKey } from '@/lib/navCopy'
 
 interface AppTopBarProps {
@@ -27,6 +28,7 @@ export function AppTopBar({ currentTab, onMenuClick }: AppTopBarProps) {
         <h1 className="truncate text-sm font-semibold text-foreground leading-tight">{label}</h1>
         <p className="truncate text-xs text-muted-foreground leading-tight">eOS</p>
       </div>
+      <ThemeToggle className="shrink-0 min-h-[44px] min-w-[44px] self-center" />
     </header>
   )
 }
