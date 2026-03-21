@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { TrendingDown, Send, CheckCircle2, Clock, Link2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { JobListingRow } from '@/lib/jobs/jobListingRow'
+import { buildStageFilterOptions, stageFilterLabel } from '@/lib/jobs/sankeyPipeline'
 
 const ApplicationPipelineChart = dynamic(
   () =>
@@ -95,6 +96,12 @@ export function ApplicationInsights({
     return parts.map((p) => ({ ...p, pct: (p.count / sum) * 100 }))
   }, [stats])
 
+  const stageFilterOptions = useMemo(() => buildStageFilterOptions(listings), [listings])
+  const breakdownRows = useMemo(
+    () => stageFilterOptions.filter((o) => o.stageKey !== null),
+    [stageFilterOptions]
+  )
+
   if (stats.total === 0) return null
 
   return (
@@ -119,18 +126,62 @@ export function ApplicationInsights({
       </div>
 
       <div className="rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Pipeline flow</h3>
-          <span className="text-xs text-muted-foreground">Sankey diagram · click a stage to filter roles</span>
-        </div>
-        <div className="min-w-0 overflow-x-auto">
-          <ApplicationPipelineChart
-            listings={listings}
-            selectedStage={selectedStage}
-            onStageSelect={onStageSelect}
-          />
-        </div>
+        <h3 className="text-sm font-semibold text-foreground">Stages in your data</h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">Before you apply</span> covers saved roles, opened apply links,
+          and skips. <span className="font-medium text-foreground">After you mark applied</span>, stages track screening
+          through offer, plus ghosted or rejected. Each role shows the same status on its card.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Click a row to filter the list below (same as the optional flow diagram). Click again to clear.
+        </p>
+        <ul className="mt-4 divide-y divide-border/60 rounded-xl border border-border/60" role="list">
+          {breakdownRows.map((row) => {
+            const key = row.stageKey!
+            const selected = selectedStage === key
+            return (
+              <li key={key}>
+                <button
+                  type="button"
+                  onClick={() => onStageSelect(key)}
+                  className={cn(
+                    'flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors',
+                    'hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    selected && 'bg-primary/10'
+                  )}
+                  aria-pressed={selected}
+                >
+                  <span className="font-medium text-foreground">{stageFilterLabel(key)}</span>
+                  <span className="tabular-nums text-muted-foreground">{row.count}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
       </div>
+
+      <details className="group rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/20 shadow-sm">
+        <summary className="cursor-pointer list-none p-5 [&::-webkit-details-marker]:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Pipeline flow diagram</h3>
+            <span className="text-xs font-medium text-primary group-open:text-muted-foreground">
+              Optional · click stages to filter
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Expand for a Sankey view. You can always use the stage list above or the filter on the roles section.
+          </p>
+        </summary>
+        <div className="border-t border-border/60 px-5 pb-5 pt-2">
+          <div className="min-w-0 overflow-x-auto">
+            <ApplicationPipelineChart
+              listings={listings}
+              selectedStage={selectedStage}
+              onStageSelect={onStageSelect}
+            />
+          </div>
+        </div>
+      </details>
 
       <div className="rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-2">

@@ -145,7 +145,8 @@ export function ApplicationPipelineChart({
         })}
       </svg>
       <p className="mt-2 text-xs text-muted-foreground">
-        Click a stage to filter roles below. Progress stages use teal, rejections rose, no reply slate, unset amber.
+        Click a stage to filter the roles list (same as the stage breakdown and roles filter). Teal = in progress, rose =
+        rejected, slate = no reply, amber = applied but stage not set.
       </p>
     </div>
   )

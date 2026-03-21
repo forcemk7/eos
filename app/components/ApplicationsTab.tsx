@@ -13,23 +13,25 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { AppShell, AppLoadingBlock } from '@/app/components/shell'
+import { AppShell, AppLoadingBlock, AppErrorState } from '@/app/components/shell'
+import { humanizeFetchError } from '@/lib/humanizeFetchError'
 import type { JobListingRow } from '@/lib/jobs/jobListingRow'
 import type { ApplicationReportMeta } from '@/lib/jobs/applicationReportMeta'
 import { ApplicationInsights } from '@/app/components/applications/ApplicationInsights'
 import { ManualApplicationSheet } from '@/app/components/applications/ManualApplicationSheet'
 import { ExternalJobSheet } from '@/app/components/jobs/ExternalJobSheet'
 import {
+  buildStageFilterOptions,
   listingMatchesSankeyFilter,
-  SANKEY_FILTER_ALL_APPLIED,
-  SANKEY_FILTER_IN_PROCESS_HUB,
+  stageFilterLabel,
 } from '@/lib/jobs/sankeyPipeline'
 import {
   isCustomPipelineStageId,
   PIPELINE_CUSTOM_PREFIX,
   PIPELINE_POST_APPLY_STAGES,
   pipelineStageLabel,
-  preApplyStageLabel,
+  pipelineStageColor,
+  resolveDisplayStage,
 } from '@/lib/jobs/pipelineTaxonomy'
 import { cn } from '@/lib/utils'
 
@@ -152,13 +154,6 @@ function companyInitial(name: string) {
   return t ? t.charAt(0).toUpperCase() : '?'
 }
 
-function stageFilterLabel(id: string): string {
-  if (id === SANKEY_FILTER_ALL_APPLIED) return 'All applied'
-  if (id === SANKEY_FILTER_IN_PROCESS_HUB) return 'In progress'
-  if (id.startsWith('pre_')) return preApplyStageLabel(id)
-  return pipelineStageLabel(id)
-}
-
 function PipelineStageControl({
   listing,
   onSaved,
@@ -264,6 +259,16 @@ function ListingPipelineCard({
 }) {
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const displayStageKey = useMemo(
+    () => resolveDisplayStage(listing),
+    [
+      listing.id,
+      listing.apply_decision,
+      listing.pipeline_stage,
+      listing.apply_outbound_at,
+      listing.source,
+    ]
+  )
   const sorted = useMemo(
     () => [...events].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
     [events]
@@ -313,6 +318,15 @@ function ListingPipelineCard({
                 <p className="mt-0.5 text-sm font-medium text-muted-foreground">{listing.company}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">{decisionBadge(listing)}</div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full ring-2 ring-background"
+                style={{ backgroundColor: pipelineStageColor(displayStageKey) }}
+                aria-hidden
+              />
+              <span className="text-muted-foreground">Pipeline status</span>
+              <span className="font-medium text-foreground">{stageFilterLabel(displayStageKey)}</span>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span className="rounded-md bg-muted/50 px-2 py-0.5 font-medium capitalize text-foreground/80">
@@ -447,18 +461,26 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
       const res = await fetch('/api/jobs/application-report', { credentials: 'include' })
       const data = await res.json()
       if (res.status === 401) {
-        setError('Sign in to view your application log.')
+        setError(humanizeFetchError(null, { status: 401, fallback: 'Sign in to view your application log.' }))
         setListings([])
         setEvents([])
         setMeta(null)
         return
       }
-      if (!res.ok) throw new Error(data.error || 'Failed to load')
+      if (!res.ok) {
+        throw new Error(
+          humanizeFetchError(null, {
+            status: res.status,
+            apiMessage: typeof data.error === 'string' ? data.error : undefined,
+            fallback: 'Failed to load your pipeline.',
+          })
+        )
+      }
       setListings(data.listings ?? [])
       setEvents(data.events ?? [])
       setMeta(data.meta ?? null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load')
+      setError(humanizeFetchError(e, { fallback: 'Failed to load your pipeline.' }))
       setListings([])
       setEvents([])
       setMeta(null)
@@ -492,6 +514,8 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
     () => listings.filter((L) => listingMatchesSankeyFilter(L, filterStageId)),
     [listings, filterStageId]
   )
+
+  const stageFilterOptions = useMemo(() => buildStageFilterOptions(listings), [listings])
 
   const handleStageSelect = useCallback((stageKey: string) => {
     setFilterStageId((prev) => (prev === stageKey ? null : stageKey))
@@ -531,8 +555,8 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
               </div>
               <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">Application pipeline</h1>
               <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
-                Track every role—from boards or elsewhere—see outcome mix like a Sankey snapshot, and keep a living
-                timeline. Logging here makes it easier to remember follow-ups and to see where your search leaks.
+                Track every role in one place: status on each card, optional flow diagram, and a timeline of updates.
+                Logging here makes follow-ups and outcome patterns easier to see.
               </p>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-2">
@@ -564,9 +588,7 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
           <SchemaBanner meta={meta} />
 
           {error && (
-            <div className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
-            </div>
+            <AppErrorState message={error} onRetry={() => void load()} className="py-4" />
           )}
 
           {loading && <AppLoadingBlock message="Loading your pipeline…" />}
@@ -607,7 +629,7 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Applied on LinkedIn or email? Use <strong>Log off-platform role</strong> above.
+                    Applied on LinkedIn or email? Use <strong>Add application</strong> above.
                   </p>
                 </div>
                 <div className="flex flex-col justify-center border-t border-border/60 bg-muted/15 p-8 md:border-l md:border-t-0">
@@ -633,27 +655,54 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
 
           {!loading && !error && listings.length > 0 && (
             <section aria-label="Application list">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Roles</h2>
-                {filterStageId != null && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => setFilterStageId(null)}
-                  >
-                    <span className="max-w-[220px] truncate text-left">
-                      Filter: {stageFilterLabel(filterStageId)}
-                    </span>
-                    <X className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-                    <span className="sr-only">Clear filter</span>
-                  </Button>
-                )}
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:max-w-xl sm:justify-end">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1 sm:min-w-[14rem] sm:flex-initial">
+                    <label
+                      htmlFor="roles-stage-filter"
+                      className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Filter by stage
+                    </label>
+                    <select
+                      id="roles-stage-filter"
+                      className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={filterStageId ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setFilterStageId(v === '' ? null : v)
+                      }}
+                    >
+                      {stageFilterOptions.map((opt) => (
+                        <option key={opt.stageKey ?? '__all__'} value={opt.stageKey ?? ''}>
+                          {opt.stageKey == null
+                            ? 'All roles'
+                            : `${stageFilterLabel(opt.stageKey)} (${opt.count})`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {filterStageId != null && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 shrink-0"
+                      onClick={() => setFilterStageId(null)}
+                    >
+                      <span className="max-w-[200px] truncate text-left">
+                        Clear: {stageFilterLabel(filterStageId)}
+                      </span>
+                      <X className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                      <span className="sr-only">Clear filter</span>
+                    </Button>
+                  )}
+                </div>
               </div>
               {filteredListings.length === 0 ? (
                 <p className="rounded-2xl border border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
-                  No roles in this stage. Clear the filter or pick another segment on the chart.
+                  No roles in this stage. Clear the filter or choose another stage.
                 </p>
               ) : (
                 <ul className="space-y-5">

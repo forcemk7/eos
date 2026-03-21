@@ -80,14 +80,15 @@ export function ManualApplicationSheet({ onLogged }: { onLogged: () => void }) {
       <SheetTrigger asChild>
         <Button type="button" variant="default" className="gap-2 shadow-sm">
           <Plus className="h-4 w-4" aria-hidden />
-          Log off-platform role
+          Add application
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="flex w-full flex-col border-l border-border/80 bg-background p-0 sm:max-w-md">
         <SheetHeader className="border-b border-border/60 px-6 py-5 text-left">
-          <SheetTitle className="text-lg">Log an application</SheetTitle>
+          <SheetTitle className="text-lg">Add application</SheetTitle>
           <SheetDescription className="text-left text-sm leading-relaxed">
-            Tracked roles from LinkedIn, email, or referrals—same pipeline and funnel as jobs you open in eOS.
+            Off-platform or external link—same application pipeline as roles from the job board. After you save, open the
+            role card below to set interview stage, notes, and updates.
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={submit} className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
