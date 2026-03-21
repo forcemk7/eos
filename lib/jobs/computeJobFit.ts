@@ -35,7 +35,7 @@ Output only valid JSON, no other text. Use exactly this shape:
   - category: one of "experience_overlap", "keywords", "seniority_tenure", "education", "location_remote", "other"
   - sentiment: one of "strength", "gap", "neutral"
   - detail: one sentence tying something concrete on the candidate profile to something emphasized (or missing) relative to the posting. Do not invent profile facts. Mention location or work authorization only if the posting or profile clearly raises it; otherwise omit those angles.
-- data_actions: 2–5 short imperative suggestions for improving the stored profile or resume text (Data tab), each grounded in a gap you identified.
+- data_actions: 2–5 short imperative suggestions for improving the stored profile or resume text (Profile), each grounded in a gap you identified.
 - jd_phrases: 0–3 short snippets or close paraphrases from the listing body when citing a requirement (empty array if none are clear).
 
 Avoid false precision, vendor-specific ATS claims, and bullet characters in string values. No markdown in JSON strings.`

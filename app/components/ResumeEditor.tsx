@@ -418,7 +418,7 @@ export default function ResumeEditor({
             <div>
               <h2 className="resume-section-title m-0 text-base">How this resume reads</h2>
               <p className="m-0 mt-1 text-sm text-muted-foreground">
-                On-demand archetypes and tags for this document. Refresh after edits; compare with your Data tab
+                On-demand archetypes and tags for this document. Refresh after edits; compare with your Profile
                 readout.
               </p>
             </div>
@@ -476,7 +476,7 @@ export default function ResumeEditor({
 
           {artifactReadout && !dataReadout && (
             <p className="m-0 mt-3 text-xs text-muted-foreground">
-              Regenerate your target profile on the Data tab to store a baseline &quot;how your data reads&quot; readout
+              Regenerate your target profile on the Profile tab to store a baseline &quot;how your data reads&quot; readout
               for side-by-side comparison.
             </p>
           )}
@@ -485,7 +485,7 @@ export default function ResumeEditor({
             <div className="mt-4 space-y-3 border-t border-border pt-4">
               <h3 className="m-0 text-sm font-semibold text-foreground">Data vs this resume</h3>
               <p className="m-0 text-xs text-muted-foreground">
-                Compared to the readout from your Data tab (regenerate targets there to refresh the baseline).
+                Compared to the readout from your Profile (regenerate targets there to refresh the baseline).
               </p>
               <div className="grid gap-3 sm:grid-cols-3 text-sm">
                 <div className="rounded-md border border-border/80 bg-muted/10 p-2.5">

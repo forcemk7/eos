@@ -15,6 +15,7 @@ import { AppSidebar, type Tab } from './components/AppSidebar'
 import { AppTopBar } from './components/AppTopBar'
 import { Dashboard } from './components/Dashboard'
 import { AppShell, AppLoadingBlock } from './components/shell'
+import { WorkflowGuideStrip } from './components/WorkflowGuideStrip'
 import { listingToSyncBody } from './components/jobs/ApplyTracking'
 import { stableExternalId } from '@/lib/jobs/stableExternalId'
 import { jdTextFromListing, type DiscoverListingWithApply } from '@/lib/jobs/discoverListing'
@@ -225,7 +226,7 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <div className="app-shell">
+      <div className="app-auth-layout">
         <header className="app-header-simple">
           <span className="app-logo">eOS</span>
           <span className="app-name">eOS</span>
@@ -239,7 +240,7 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="app-shell">
+      <div className="app-auth-layout">
         <header className="app-header-simple">
           <span className="app-logo">eOS</span>
           <span className="app-name">eOS</span>
@@ -262,10 +263,19 @@ export default function Home() {
         sheetOpen={sheetOpen}
         onSheetOpenChange={setSheetOpen}
       />
-      <div className="flex flex-1 flex-col min-w-0 md:ml-60">
+      <div className="flex flex-1 flex-col min-w-0 md:ml-[15.5rem]">
         <AppTopBar onMenuClick={() => setSheetOpen(true)} />
-        <main className={`flex-1 flex flex-col min-h-0 ${tab === 'cover-letter' ? ' app-content-cover-letter' : ''}`}>
-          <div className={tab === 'cover-letter' ? 'flex-1 flex flex-col min-h-0' : 'flex-1 overflow-y-auto app-content'}>
+        <main
+          className={`flex min-h-0 min-w-0 flex-1 flex-col ${tab === 'cover-letter' ? ' app-content-cover-letter' : ''}`}
+        >
+          <div
+            className={
+              tab === 'cover-letter'
+                ? 'flex min-h-0 min-w-0 flex-1 flex-col'
+                : 'app-content min-w-0 flex-1 overflow-y-auto'
+            }
+          >
+            <WorkflowGuideStrip />
             {totalIncomplete > 0 && tab !== 'dashboard' && (
               <div className="dashboard-incomplete-strip" role="status">
                 <span className="dashboard-incomplete-text">

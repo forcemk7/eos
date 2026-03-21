@@ -196,7 +196,7 @@ export function JobFitExplainModal({
                   onOpenChange(false)
                 }}
               >
-                Open Data tab
+                Open Profile
               </Button>
             )}
             {onTailorToJob && (

@@ -95,7 +95,7 @@ export function JobEmptyAI({ onRefresh }: { onRefresh: () => void }) {
     <JobStateBlock
       icon={<Briefcase className="h-8 w-8 opacity-70" />}
       title="No listings yet"
-      description="We could not find roles for your generated search. Refresh qualifications or update your Data tab."
+      description="We could not find roles for your generated search. Refresh qualifications or update your Profile."
       primaryAction={{ label: 'Refresh qualifications', onClick: onRefresh }}
     />
   )

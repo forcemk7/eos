@@ -525,8 +525,8 @@ export default function DataTab({
       <TargetProfilePanel hasData={hasData} refreshKey={targetProfileRefreshKey} profileData={hasData ? data : null} />
 
       <section className="data-content panel">
-        <div className="data-content-head">
-          <h2 className="app-section-title">Your data</h2>
+        <div className="data-content-head data-content-head--sticky">
+          <h2 className="app-section-title">Your profile</h2>
           {hasData && (
             <div className="data-actions">
               <button type="button" className="primary-button" onClick={handleSave} disabled={saving}>

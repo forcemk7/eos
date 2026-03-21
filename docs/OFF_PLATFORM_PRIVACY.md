@@ -6,7 +6,7 @@ This document describes what user data leaves the device, where it is stored, an
 
 | Data | Stored in eOS | Sent to LLM? | Notes |
 |------|---------------|--------------|--------|
-| Profile (“CV” / Data tab) | Supabase (RLS-scoped to your account) | Yes, when you run **job fit** or **cover letter** | Assembled text summary built server-side from your profile tables |
+| Profile (“CV” / Profile tab) | Supabase (RLS-scoped to your account) | Yes, when you run **job fit** or **cover letter** | Assembled text summary built server-side from your profile tables |
 | JD plain text | `job_listings.description` / `snippet`, and/or chat messages | Yes, when you run fit or cover-letter chat | Fit checks truncate very long text (see `lib/jobs/computeJobFit.ts`) |
 | JD screenshots | Supabase Storage bucket `cover-letter` (private paths under your user id) | Yes, as time-limited signed URLs when used in chat or JD extraction | Same bucket as cover-letter attachments; not world-readable |
 | Apply / pipeline events | `application_events` + columns on `job_listings` | No | Used for your timeline and reporting |

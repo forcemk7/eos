@@ -4,19 +4,32 @@ import * as React from 'react'
 import type { User } from '@supabase/supabase-js'
 import { Database, Briefcase, Sparkles, FileText, FileCode, GitBranch } from 'lucide-react'
 import type { Tab } from './AppSidebar'
+import { navItemCopy, dashboardPage } from '@/lib/navCopy'
 import { ApplicationPipelineDashboardStrip } from '@/app/components/applications/ApplicationPipelineDashboardStrip'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
 import { AppShell, AppPageHeader } from '@/app/components/shell'
 import { FeatureCard } from './FeatureCard'
 
-const FEATURES: { tab: Tab; title: string; description: string; icon: React.ElementType }[] = [
-  { tab: 'data', title: 'Data', description: 'Manage your profile data and keep your resume source up to date.', icon: Database },
-  { tab: 'jobs', title: 'Job Board', description: 'Browse and save job listings to track applications.', icon: Briefcase },
-  { tab: 'ai-jobs', title: 'Recommended Jobs', description: 'Discover jobs that match your profile with AI-powered recommendations.', icon: Sparkles },
-  { tab: 'cover-letter', title: 'Cover Letter', description: 'Generate and manage job-specific cover letters for your applications.', icon: FileText },
-  { tab: 'resume', title: 'Resume', description: 'Edit your resume, get AI suggestions, and export to PDF.', icon: FileCode },
-]
+const FEATURE_TABS = ['data', 'resume', 'jobs', 'ai-jobs', 'cover-letter', 'applications'] as const satisfies readonly Tab[]
+
+type FeatureTab = (typeof FEATURE_TABS)[number]
+
+const FEATURE_ICONS: Record<FeatureTab, React.ElementType> = {
+  data: Database,
+  resume: FileCode,
+  jobs: Briefcase,
+  'ai-jobs': Sparkles,
+  'cover-letter': FileText,
+  applications: GitBranch,
+}
+
+const FEATURES = FEATURE_TABS.map((tab) => ({
+  tab,
+  title: navItemCopy[tab].label,
+  description: navItemCopy[tab].title,
+  icon: FEATURE_ICONS[tab],
+}))
 
 interface DashboardProps {
   user: User | null
@@ -39,7 +52,7 @@ export function Dashboard({
         as="h1"
         variant="page"
         title="Dashboard"
-        description="Overview of your job application tools. Open a card to get started."
+        description={dashboardPage.description}
       />
 
       {totalIncomplete > 0 && onViewIncomplete && (
@@ -62,7 +75,7 @@ export function Dashboard({
               <GitBranch className="h-5 w-5 text-primary" aria-hidden />
             </div>
             <div className="min-w-0 space-y-1">
-              <h2 className="text-base font-semibold text-foreground">Application pipeline &amp; log</h2>
+              <h2 className="text-base font-semibold text-foreground">Applications</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Boards, off-platform applies, Sankey pipeline view, and timeline updates—with CSV export for deeper
                 analysis.
@@ -70,7 +83,7 @@ export function Dashboard({
             </div>
           </div>
           <Button className="shrink-0 w-full sm:w-auto" onClick={() => onNavigate('applications')}>
-            Open application log
+            Open applications
           </Button>
         </CardContent>
       </Card>

@@ -25,6 +25,12 @@
     --input: 215 28% 17%;
     --ring: 217 91% 60%;
     --radius: 0.5rem;
+    --radius-lg: 0.75rem;
+    /* earnOS semantic status (HSL components for hsl() / alpha) */
+    --success: 142 71% 45%;
+    --success-foreground: 144 61% 98%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 26 90% 12%;
   }
   .dark {
     --background: 222 47% 6%;
@@ -40,6 +46,11 @@
     --border: 215 28% 17%;
     --input: 215 28% 17%;
     --ring: 217 91% 60%;
+    --radius-lg: 0.75rem;
+    --success: 142 71% 45%;
+    --success-foreground: 144 61% 98%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 26 90% 12%;
   }
 }
 
@@ -52,21 +63,26 @@
 }
 
 :root {
+  /* Legacy earnOS surfaces — eos-* avoids clobbering shadcn --border / --accent (HSL for Tailwind hsl(var(...))) */
   --bg: #0b0f13;
   --bg-card: #141a22;
   --bg-input: #0f1419;
-  --border: rgba(255, 255, 255, 0.07);
+  --eos-border: rgba(255, 255, 255, 0.07);
   --border-focus: rgba(88, 166, 255, 0.5);
   --text: #e2e8f0;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
+  --eos-accent: #3b82f6;
+  --eos-accent-hover: #60a5fa;
   --danger: #ef4444;
   --danger-bg: rgba(239, 68, 68, 0.1);
-  --radius: 8px;
-  --radius-lg: 12px;
   --content-max: 960px;
+  /* App layout tokens — mirror .app-content padding and AppShell gap; cover-letter uses pad-x when main has no padding */
+  --content-max-wide: 1200px;
+  --app-content-pad-x: 24px;
+  --app-content-pad-y-top: 32px;
+  --app-content-pad-y-bottom: 64px;
+  --app-shell-gap: 24px;
 }
 
 html, body {
@@ -83,12 +99,136 @@ html, body {
   font-size: 15px;
 }
 
-/* ── App shell ─────────────────────────────────────────── */
+/* ── earnOS typography scale (page / section / card / label + hints) ── */
 
-.app-shell {
+.eos-title-page,
+.auth-title,
+.resume-first-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: hsl(var(--foreground));
+}
+
+.eos-title-page {
+  margin: 0;
+}
+
+.auth-title,
+.resume-first-title {
+  margin: 0 0 8px;
+}
+
+.eos-title-section,
+.app-section-title,
+.prefs-title,
+.creds-title,
+.activity-title,
+.resume-editor-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: hsl(var(--foreground));
+}
+
+.eos-title-section {
+  margin: 0;
+}
+
+.app-section-title,
+.prefs-title,
+.creds-title,
+.activity-title,
+.resume-editor-title {
+  margin: 0 0 6px;
+}
+
+.eos-title-card,
+.panel h2,
+.links-panel-title,
+.cover-letter-panel .cover-letter-title,
+.jobs-filters-panel .jobs-section-title,
+.jobs-add-panel .jobs-add-title,
+.jobs-list-panel .jobs-list-title,
+.jobs-discover-panel .jobs-section-title,
+.jobs-card-title,
+.app-state-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: hsl(var(--foreground));
+}
+
+.eos-title-card {
+  margin: 0;
+}
+
+.panel h2 {
+  margin: 0 0 4px;
+}
+
+.links-panel-title {
+  margin: 0 0 4px 0;
+}
+
+.cover-letter-panel .cover-letter-title {
+  margin: 0 0 6px;
+}
+
+.jobs-filters-panel .jobs-section-title,
+.jobs-add-panel .jobs-add-title,
+.jobs-list-panel .jobs-list-title,
+.jobs-discover-panel .jobs-section-title {
+  margin: 0 0 6px;
+}
+
+.jobs-card-title {
+  margin: 0 0 4px;
+}
+
+.app-state-title {
+  margin: 0;
+}
+
+.eos-title-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.eos-text-hint,
+.app-section-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* Matches shadcn focus-visible:ring-2 + ring-offset-2 on hsl(--background) */
+.eos-focus-ring:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(var(--background)),
+    0 0 0 4px hsl(var(--ring));
+}
+
+.eos-focus-ring-inset:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px hsl(var(--ring));
+}
+
+/* ── Full-page auth / loading (not the in-app AppShell content column) ── */
+
+.app-auth-layout {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  width: 100%;
 }
 
 /* ── Header ────────────────────────────────────────────── */
@@ -99,7 +239,7 @@ html, body {
   gap: 12px;
   height: 56px;
   padding: 0 24px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
   background: var(--bg-card);
   flex-shrink: 0;
 }
@@ -112,7 +252,7 @@ html, body {
   font-weight: 700;
   font-size: 10px;
   letter-spacing: 0.03em;
-  background: var(--accent);
+  background: var(--eos-accent);
   color: #fff;
   border-radius: 6px;
   flex-shrink: 0;
@@ -182,7 +322,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 10px var(--app-content-pad-x);
   margin-bottom: 16px;
   background: rgba(251, 191, 36, 0.08);
   border: 1px dashed rgba(251, 191, 36, 0.4);
@@ -199,7 +339,7 @@ html, body {
   padding: 4px 12px;
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--eos-accent);
   background: none;
   border: none;
   cursor: pointer;
@@ -214,8 +354,10 @@ html, body {
 
 .app-content {
   flex: 1;
-  padding: 32px 24px 64px;
+  min-width: 0;
+  padding: var(--app-content-pad-y-top) var(--app-content-pad-x) var(--app-content-pad-y-bottom);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Cover letter tab: use full content area, sub-header under main header */
@@ -244,7 +386,7 @@ html, body {
 
 .panel {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius-lg);
   padding: 24px;
 }
@@ -262,28 +404,21 @@ html, body {
   line-height: 1.5;
 }
 
-/* ── App shell (shared with job boards) ─────────────────── */
+/* ── AppShell component: centered content column (job boards, tabs) ── */
 
 .app-shell {
   width: 100%;
+  min-width: 0;
   max-width: var(--content-max);
   margin-left: auto;
   margin-right: auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--app-shell-gap);
 }
 
 .app-shell--wide {
-  max-width: min(1200px, 100%);
-}
-
-.app-section-title {
-  margin: 0 0 6px;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.01em;
+  max-width: min(var(--content-max-wide), 100%);
 }
 
 .app-section-hint {
@@ -307,7 +442,7 @@ html, body {
   padding: 9px 18px;
   border-radius: var(--radius);
   border: none;
-  background: var(--accent);
+  background: var(--eos-accent);
   color: #fff;
   font-weight: 600;
   font-size: 0.85rem;
@@ -318,7 +453,7 @@ html, body {
 }
 
 .primary-button:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: var(--eos-accent-hover);
 }
 
 .primary-button:active:not(:disabled) {
@@ -337,7 +472,7 @@ html, body {
   gap: 6px;
   padding: 7px 14px;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   background: transparent;
   color: var(--text-secondary);
   font-size: 0.82rem;
@@ -382,7 +517,7 @@ html, body {
 .field-group .link-row input {
   padding: 6px 10px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -406,7 +541,7 @@ select {
   width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   background: var(--bg-input);
   color: var(--text);
   font-size: 0.9rem;
@@ -481,7 +616,7 @@ textarea::placeholder {
 .auth-toggle {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--eos-accent);
   font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
@@ -515,7 +650,7 @@ textarea::placeholder {
 
 .resume-dropzone {
   position: relative;
-  border: 2px dashed var(--border);
+  border: 2px dashed var(--eos-border);
   border-radius: var(--radius-lg);
   background: var(--bg-card);
   padding: 40px 24px;
@@ -526,7 +661,7 @@ textarea::placeholder {
 
 .resume-dropzone:hover,
 .resume-dropzone.drag-over {
-  border-color: var(--accent);
+  border-color: var(--eos-accent);
   background: rgba(59, 130, 246, 0.04);
 }
 
@@ -575,7 +710,7 @@ textarea::placeholder {
   color: var(--danger);
 }
 
-/* ── Data tab ───────────────────────────────────────────── */
+/* ── Profile tab (data) ─────────────────────────────────── */
 
 /* .data-tab: layout from parent .app-shell (DataTab) */
 
@@ -598,7 +733,7 @@ textarea::placeholder {
 
 .data-dropzone {
   position: relative;
-  border: 2px dashed var(--border);
+  border: 2px dashed var(--eos-border);
   border-radius: var(--radius-lg);
   background: var(--bg-input);
   padding: 28px 24px;
@@ -608,7 +743,7 @@ textarea::placeholder {
 }
 
 .data-dropzone:hover {
-  border-color: var(--accent);
+  border-color: var(--eos-accent);
   background: rgba(59, 130, 246, 0.04);
 }
 
@@ -636,7 +771,7 @@ textarea::placeholder {
   width: 100%;
   padding: 10px 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -681,14 +816,14 @@ textarea::placeholder {
   padding: 8px 14px;
   font-size: 0.9rem;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text-secondary);
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
 }
 .data-dropzone-compact:hover {
-  border-color: var(--accent);
+  border-color: var(--eos-accent);
   color: var(--text);
 }
 .data-upload-sep {
@@ -700,7 +835,7 @@ textarea::placeholder {
   min-width: 140px;
   padding: 8px 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -729,12 +864,22 @@ textarea::placeholder {
   margin-bottom: 0;
 }
 
+.data-content.panel .data-content-head--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  padding: 12px 0 14px;
+  margin-bottom: 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--eos-border);
+}
+
 .data-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
 }
 .data-tab-btn {
   padding: 10px 16px;
@@ -752,8 +897,8 @@ textarea::placeholder {
   color: var(--text);
 }
 .data-tab-btn.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--eos-accent);
+  border-bottom-color: var(--eos-accent);
 }
 .data-tab-panels {
   min-height: 120px;
@@ -796,7 +941,7 @@ textarea::placeholder {
   padding: 8px 12px;
   margin-bottom: 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -813,7 +958,7 @@ textarea::placeholder {
 .cover-letter-result {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--eos-border);
 }
 
 .cover-letter-result-head {
@@ -835,7 +980,7 @@ textarea::placeholder {
   max-width: 100%;
   padding: 8px 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -850,10 +995,12 @@ textarea::placeholder {
   max-width: none;
   width: 100%;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0;
+  overflow-x: hidden;
 }
 
 /* Sub-header: only for this tab, sits under main header */
@@ -862,8 +1009,8 @@ textarea::placeholder {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  padding: 10px 20px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px var(--app-content-pad-x) 12px;
+  border-bottom: 1px solid var(--eos-border);
   background: var(--bg-card);
   gap: 12px;
 }
@@ -915,8 +1062,8 @@ textarea::placeholder {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 8px 20px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 8px var(--app-content-pad-x) 12px;
+  border-bottom: 1px solid var(--eos-border);
   background: var(--bg-card);
   flex-shrink: 0;
 }
@@ -935,7 +1082,7 @@ textarea::placeholder {
   padding: 8px 12px;
   font-size: 0.875rem;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   background: var(--bg);
   color: var(--text);
 }
@@ -965,7 +1112,7 @@ textarea::placeholder {
   max-width: 85vw;
   z-index: 91;
   background: var(--bg-card);
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--eos-border);
   display: flex;
   flex-direction: column;
   padding: 16px 12px 16px 0;
@@ -980,7 +1127,7 @@ textarea::placeholder {
   padding: 8px 12px;
   margin: 0 0 0 8px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text-muted);
 }
@@ -1006,7 +1153,7 @@ textarea::placeholder {
 
 .cover-letter-drawer-skeleton-item {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
 }
 
 .cover-letter-drawer-empty {
@@ -1103,7 +1250,7 @@ textarea::placeholder {
   padding: 4px 0;
   min-width: 120px;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -1152,7 +1299,7 @@ textarea::placeholder {
   padding: 20px;
   min-width: 280px;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
@@ -1168,7 +1315,7 @@ textarea::placeholder {
 .cover-letter-rename-input {
   padding: 8px 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -1186,7 +1333,7 @@ textarea::placeholder {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0 24px;
+  padding: 0 var(--app-content-pad-x);
   gap: 16px;
 }
 
@@ -1236,7 +1383,7 @@ textarea::placeholder {
   padding: 10px 14px;
   background: var(--bg-input);
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
 }
 
 .cover-letter-msg-texts .cover-letter-msg-text:not(:last-child) {
@@ -1273,7 +1420,7 @@ textarea::placeholder {
   flex-shrink: 0;
   border-radius: var(--radius);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   background: var(--bg-input);
 }
 
@@ -1346,7 +1493,7 @@ textarea::placeholder {
 .cover-letter-msg-assistant-content {
   padding: 12px 14px;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
 }
 
@@ -1370,7 +1517,7 @@ textarea::placeholder {
   align-items: stretch;
   gap: 0;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   padding: 12px 12px 12px 16px;
   min-height: 52px;
@@ -1414,7 +1561,7 @@ textarea::placeholder {
   display: inline-block;
   border-radius: var(--radius);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   background: var(--bg-input);
 }
 
@@ -1486,7 +1633,7 @@ textarea::placeholder {
 .jobs-filter-input {
   padding: 8px 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -1584,7 +1731,7 @@ textarea::placeholder {
 .jobs-add-textarea {
   padding: 8px 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -1619,7 +1766,7 @@ textarea::placeholder {
   margin-top: 12px;
   padding: 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   font-size: 0.9rem;
   color: var(--text-secondary);
@@ -1665,7 +1812,7 @@ textarea::placeholder {
   gap: 12px;
   padding: 16px;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius-lg);
 }
 
@@ -1702,7 +1849,7 @@ textarea::placeholder {
   font-size: 0.75rem;
   font-weight: 500;
   background: rgba(59, 130, 246, 0.15);
-  color: var(--accent);
+  color: var(--eos-accent);
   border-radius: 4px;
 }
 
@@ -1767,7 +1914,7 @@ textarea::placeholder {
   width: 100%;
   max-width: 420px;
   min-width: min(320px, 100%);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius-lg);
   background: var(--bg-card);
   overflow: hidden;
@@ -1799,7 +1946,7 @@ textarea::placeholder {
   font-size: 0.8rem;
   font-weight: 500;
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   background: var(--bg-input);
   color: var(--text-secondary);
 }
@@ -1812,7 +1959,7 @@ textarea::placeholder {
 
 .jobs-filter-chip--removable:hover {
   background: var(--bg-card);
-  border-color: var(--accent);
+  border-color: var(--eos-accent);
   color: var(--text);
 }
 
@@ -1852,7 +1999,7 @@ textarea::placeholder {
 
 .jobs-skeleton-row {
   padding: 16px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius-lg);
   background: var(--bg-card);
   display: flex;
@@ -1916,7 +2063,7 @@ textarea::placeholder {
   text-align: center;
   gap: 12px;
   padding: 32px 20px;
-  border: 1px dashed var(--border);
+  border: 1px dashed var(--eos-border);
   border-radius: var(--radius-lg);
   background: var(--bg-input);
 }
@@ -1979,7 +2126,7 @@ textarea::placeholder {
 .data-chunk-ach-row input {
   padding: 8px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -2030,7 +2177,7 @@ textarea::placeholder {
 .data-chunk-lang-row input {
   padding: 8px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -2058,7 +2205,7 @@ textarea::placeholder {
   flex: 1;
   padding: 8px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.95rem;
@@ -2078,7 +2225,7 @@ textarea::placeholder {
   flex: 1;
   padding: 6px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -2149,7 +2296,7 @@ textarea::placeholder {
 
 .data-chunk-card {
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   padding: 14px 16px;
 }
@@ -2223,7 +2370,7 @@ textarea::placeholder {
   min-width: 0;
   padding: 10px 14px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -2235,7 +2382,7 @@ textarea::placeholder {
 }
 .links-add-btn {
   padding: 10px 18px;
-  background: var(--accent);
+  background: var(--eos-accent);
   color: #fff;
   border: none;
   border-radius: var(--radius);
@@ -2246,13 +2393,13 @@ textarea::placeholder {
   flex-shrink: 0;
 }
 .links-add-btn:hover {
-  background: var(--accent-hover);
+  background: var(--eos-accent-hover);
 }
 .links-empty {
   margin: 0;
   padding: 24px 20px;
   background: var(--bg-input);
-  border: 1px dashed var(--border);
+  border: 1px dashed var(--eos-border);
   border-radius: var(--radius);
   color: var(--text-muted);
   font-size: 0.875rem;
@@ -2272,7 +2419,7 @@ textarea::placeholder {
   gap: 10px;
   padding: 10px 12px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   transition: border-color 0.15s;
 }
@@ -2302,7 +2449,7 @@ textarea::placeholder {
   transition: color 0.15s, background 0.15s;
 }
 .links-list-open:hover {
-  color: var(--accent);
+  color: var(--eos-accent);
   background: rgba(255, 255, 255, 0.06);
 }
 .links-remove {
@@ -2335,7 +2482,7 @@ textarea::placeholder {
   width: 100%;
   padding: 8px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -2346,7 +2493,7 @@ textarea::placeholder {
   min-height: 72px;
   padding: 10px 12px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -2372,7 +2519,7 @@ textarea::placeholder {
   min-width: 120px;
   padding: 6px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -2384,7 +2531,7 @@ textarea::placeholder {
   min-width: 120px;
   padding: 6px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.9rem;
@@ -2394,7 +2541,7 @@ textarea::placeholder {
   width: 140px;
   padding: 6px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -2444,7 +2591,7 @@ textarea::placeholder {
   flex: 1;
   padding: 8px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   color: var(--text);
   font-size: 0.88rem;
@@ -2468,7 +2615,7 @@ textarea::placeholder {
   gap: 4px;
   padding: 6px 10px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: 999px;
 }
 
@@ -2495,7 +2642,7 @@ textarea::placeholder {
 .data-chunk-skill-add-input {
   padding: 6px 10px;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: 999px;
   color: var(--text);
   font-size: 0.85rem;
@@ -2528,6 +2675,16 @@ textarea::placeholder {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.resume-editor-main > .resume-editor-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 12px 0 14px;
+  margin-bottom: 4px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--eos-border);
 }
 
 .resume-editor-header-text {
@@ -2574,7 +2731,7 @@ textarea::placeholder {
 .resume-suggestion-item {
   padding: 12px 14px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
 }
 
@@ -2602,7 +2759,7 @@ textarea::placeholder {
 }
 
 .resume-suggestion-arrow {
-  color: var(--accent);
+  color: var(--eos-accent);
   flex-shrink: 0;
 }
 
@@ -2623,7 +2780,7 @@ textarea::placeholder {
 /* Section panels inside the editor */
 .resume-section {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius-lg);
   padding: 20px 24px;
 }
@@ -2668,7 +2825,7 @@ textarea::placeholder {
 
 .resume-exp-block {
   padding: 16px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
 }
 
 .resume-exp-block:first-child {
@@ -2729,7 +2886,7 @@ textarea::placeholder {
 
 .resume-preview-tab {
   padding: 6px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   background: var(--bg-input);
   color: var(--text-muted);
@@ -2745,9 +2902,9 @@ textarea::placeholder {
 }
 
 .resume-preview-tab.active {
-  background: var(--accent);
+  background: var(--eos-accent);
   color: #fff;
-  border-color: var(--accent);
+  border-color: var(--eos-accent);
 }
 
 .resume-preview-frame {
@@ -3059,7 +3216,7 @@ textarea::placeholder {
   align-items: flex-end;
   margin-bottom: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
 }
 
 .tracker-add-form input {
@@ -3080,7 +3237,7 @@ textarea::placeholder {
 
 .kanban-column {
   background: var(--bg-input);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
@@ -3089,7 +3246,7 @@ textarea::placeholder {
 
 .kanban-column-header {
   padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3104,7 +3261,7 @@ textarea::placeholder {
 
 .kanban-count {
   background: rgba(59, 130, 246, 0.12);
-  color: var(--accent);
+  color: var(--eos-accent);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 0.72rem;
@@ -3119,7 +3276,7 @@ textarea::placeholder {
 
 .kanban-column-content.drag-over {
   background: rgba(59, 130, 246, 0.04);
-  outline: 2px dashed var(--accent);
+  outline: 2px dashed var(--eos-accent);
   outline-offset: -2px;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
@@ -3133,7 +3290,7 @@ textarea::placeholder {
 
 .kanban-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--eos-border);
   border-radius: var(--radius);
   padding: 12px 14px;
   margin-bottom: 8px;
@@ -3207,7 +3364,7 @@ textarea::placeholder {
 
 .kanban-card-link {
   font-size: 0.78rem;
-  color: var(--accent);
+  color: var(--eos-accent);
   text-decoration: none;
 }
 
@@ -3237,7 +3394,7 @@ textarea::placeholder {
   display: inline-block;
   width: 1px;
   height: 18px;
-  background: var(--border);
+  background: var(--eos-border);
   margin: 0 6px;
   vertical-align: middle;
 }
@@ -3291,7 +3448,7 @@ textarea::placeholder {
 .prefs-checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: var(--accent);
+  accent-color: var(--eos-accent);
   cursor: pointer;
 }
 
@@ -3390,13 +3547,13 @@ textarea::placeholder {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
 }
 
 .creds-table td {
   padding: 12px 14px;
   font-size: 0.88rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
 }
 
 .creds-platform {
@@ -3487,7 +3644,7 @@ textarea::placeholder {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
   white-space: nowrap;
 }
 
@@ -3507,7 +3664,7 @@ textarea::placeholder {
 .activity-table td {
   padding: 10px 14px;
   font-size: 0.85rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
   vertical-align: top;
 }
 
@@ -3539,7 +3696,7 @@ textarea::placeholder {
 
 .activity-detail-row td {
   padding: 0 14px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--eos-border);
 }
 
 .activity-detail-pre {

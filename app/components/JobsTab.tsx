@@ -18,6 +18,7 @@ import {
   type JobSort,
 } from '@/app/components/jobs'
 import { ExternalJobSheet } from '@/app/components/jobs/ExternalJobSheet'
+import { jobBoardPage } from '@/lib/navCopy'
 
 export type { DiscoverListing, DiscoverListingWithApply }
 
@@ -285,11 +286,10 @@ export default function JobsTab({
     <JobsShell>
       <Card className="jobs-board-surface border-border">
         <CardHeader className="jobs-board-header app-board-header">
-          <CardTitle className="jobs-section-title">Job board</CardTitle>
+          <CardTitle className="jobs-section-title">{jobBoardPage.title}</CardTitle>
           <CardDescription className="jobs-section-hint">
-            {hasSearched
-              ? 'Apply on the employer site. Results refresh from the API once per search and are cached 24h.'
-              : 'Search roles by keywords and location. One discovery request per search (cached 24h).'}
+            {hasSearched ? jobBoardPage.descriptionSearched : jobBoardPage.descriptionIdle}{' '}
+            Start tailoring from a listing to continue in Resume.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

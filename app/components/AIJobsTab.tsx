@@ -19,6 +19,7 @@ import {
   type JobSort,
 } from '@/app/components/jobs'
 import type { JobSearchAnchor } from '@/lib/jobs/jobSearchAnchor'
+import { recommendedJobsPage } from '@/lib/navCopy'
 
 export type { DiscoverListing, DiscoverListingWithApply }
 
@@ -178,7 +179,7 @@ export default function AIJobsTab({
           const postData = await postRes.json()
           if (cancelled) return
           if (!postRes.ok) {
-            setAiError(postData.error || 'Complete your Data tab first, then refresh.')
+            setAiError(postData.error || 'Complete your Profile first, then refresh.')
             return
           }
           if (postData.qualifications) {
@@ -261,9 +262,9 @@ export default function AIJobsTab({
       <StrongMatchLoopPanel onOpenDataTab={onOpenDataTab} onStartTailorResume={onStartTailorResume} />
       <Card className="jobs-board-surface border-border">
         <CardHeader className="jobs-board-header app-board-header">
-          <CardTitle className="jobs-section-title">AI job board</CardTitle>
+          <CardTitle className="jobs-section-title">{recommendedJobsPage.title}</CardTitle>
           <CardDescription className="jobs-section-hint">
-            Roles matched to your profile. Search terms are generated from your Data tab.
+            {recommendedJobsPage.description} Start tailoring from a listing to continue in Resume.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
