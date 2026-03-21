@@ -726,6 +726,65 @@ textarea::placeholder {
   color: var(--danger);
 }
 
+.resume-upload-steps {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resume-upload-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.resume-upload-step-num {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--eos-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.resume-upload-step--active {
+  color: var(--foreground);
+}
+
+.resume-upload-step--active .resume-upload-step-num {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--foreground);
+}
+
+.resume-upload-step--done {
+  color: var(--foreground);
+}
+
+.resume-upload-step--done .resume-upload-step-num {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--eos-border));
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.resume-upload-step-label {
+  padding-top: 2px;
+  line-height: 1.35;
+}
+
+.resume-upload-step-file {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
 /* ── Profile tab (data) ─────────────────────────────────── */
 
 /* .data-tab: layout from parent .app-shell (DataTab) */
@@ -817,6 +876,12 @@ textarea::placeholder {
   gap: 10px;
   flex-wrap: wrap;
 }
+.data-upload-purpose {
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
 .data-dropzone-compact {
   position: relative;
   padding: 8px 14px;
@@ -878,6 +943,13 @@ textarea::placeholder {
   margin-bottom: 16px;
   background: var(--bg-card);
   border-bottom: 1px solid var(--eos-border);
+}
+
+.data-incomplete-explainer {
+  margin: 0 0 14px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
 
 .data-tabs {
@@ -1016,21 +1088,36 @@ textarea::placeholder {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  flex-wrap: wrap;
   padding: 10px var(--app-content-pad-x) 12px;
   border-bottom: 1px solid var(--eos-border);
   background: var(--bg-card);
   gap: 12px;
+  row-gap: 10px;
 }
 
 .cover-letter-top-bar-left {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .cover-letter-top-bar-right {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  row-gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+@media (max-width: 520px) {
+  .cover-letter-top-bar-right {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .cover-letter-top-bar-btn {
@@ -1072,23 +1159,55 @@ textarea::placeholder {
 
 .cover-letter-job-link-bar {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 8px var(--app-content-pad-x) 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 10px var(--app-content-pad-x) 12px;
   border-bottom: 1px solid var(--eos-border);
   background: var(--bg-card);
   flex-shrink: 0;
 }
 
-.cover-letter-job-link-bar label {
+.cover-letter-job-context {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cover-letter-job-summary {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.cover-letter-job-summary-label {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.cover-letter-job-summary-sep {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.cover-letter-job-link-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cover-letter-job-link-row label {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-.cover-letter-job-link-bar select {
+.cover-letter-job-link-row select {
   min-width: min(100%, 220px);
   max-width: 100%;
   flex: 1 1 200px;
@@ -1103,7 +1222,6 @@ textarea::placeholder {
 .cover-letter-job-link-bar .cover-letter-job-link-hint {
   font-size: 0.75rem;
   color: var(--text-muted);
-  flex: 1 1 100%;
 }
 
 /* History drawer: opens from the right */
@@ -2282,6 +2400,13 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.data-panel-purpose {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
 
 .data-chunk-group {

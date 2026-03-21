@@ -448,6 +448,26 @@ export default function CoverLetterTab() {
     return meta?.job_listing_id ?? ''
   }, [currentChatId, chats, jobLinkForNewChat])
 
+  const linkedJob = useMemo(() => {
+    const id = trackedJobSelectValue
+    if (!id) return null
+    return savedJobs.find((j) => j.id === id) ?? null
+  }, [trackedJobSelectValue, savedJobs])
+
+  const orphanedJobLink = Boolean(trackedJobSelectValue && !linkedJob)
+
+  const latestDraftText = (latestAssistantDraft ?? '').trim()
+  const hasLatestDraft = Boolean(latestDraftText)
+
+  const [copyLatestFeedback, setCopyLatestFeedback] = useState(false)
+  const copyFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimer.current) clearTimeout(copyFeedbackTimer.current)
+    }
+  }, [])
+
   const loadChats = useCallback(async () => {
     setLoadingChats(true)
     setError(null)
@@ -692,11 +712,22 @@ export default function CoverLetterTab() {
     setMenuChatId(null)
   }
 
+  function handleCopyLatestDraft() {
+    if (!latestDraftText) return
+    navigator.clipboard.writeText(latestDraftText).then(() => {
+      if (copyFeedbackTimer.current) clearTimeout(copyFeedbackTimer.current)
+      setCopyLatestFeedback(true)
+      copyFeedbackTimer.current = setTimeout(() => {
+        setCopyLatestFeedback(false)
+        copyFeedbackTimer.current = null
+      }, 2000)
+    }).catch(() => {})
+  }
+
   function handleExportCoverPdf() {
-    const text = latestAssistantDraft?.trim()
-    if (!text) return
+    if (!latestDraftText) return
     const safe = new Date().toISOString().slice(0, 10)
-    exportCoverLetterToPdf(text, `cover-letter-${safe}.pdf`)
+    exportCoverLetterToPdf(latestDraftText, `cover-letter-${safe}.pdf`)
   }
 
   return (
@@ -713,13 +744,26 @@ export default function CoverLetterTab() {
             <IconFullscreen exit={isFullscreen} />
           </button>
         </div>
+        <span className="sr-only" aria-live="polite" aria-atomic="true">
+          {copyLatestFeedback ? 'Latest draft copied to clipboard' : ''}
+        </span>
         <div className="cover-letter-top-bar-right">
           <button
             type="button"
             className="cover-letter-top-bar-btn cover-letter-top-bar-btn-text"
-            disabled={!latestAssistantDraft?.trim()}
+            disabled={!hasLatestDraft}
+            onClick={handleCopyLatestDraft}
+            title={hasLatestDraft ? 'Copy latest assistant draft' : 'No assistant draft yet'}
+            aria-label="Copy latest cover letter draft"
+          >
+            <span>{copyLatestFeedback ? 'Copied!' : 'Copy latest'}</span>
+          </button>
+          <button
+            type="button"
+            className="cover-letter-top-bar-btn cover-letter-top-bar-btn-text"
+            disabled={!hasLatestDraft}
             onClick={handleExportCoverPdf}
-            title={latestAssistantDraft?.trim() ? 'Download latest draft as PDF' : 'No assistant draft yet'}
+            title={hasLatestDraft ? 'Download latest draft as PDF' : 'No assistant draft yet'}
             aria-label="Export cover letter PDF"
           >
             <span>Export PDF</span>
@@ -749,23 +793,48 @@ export default function CoverLetterTab() {
       </header>
 
       <div className="cover-letter-job-link-bar">
-        <label htmlFor="cover-letter-tracked-job">Tracked job</label>
-        <select
-          id="cover-letter-tracked-job"
-          value={trackedJobSelectValue}
-          onChange={onTrackedJobChange}
-          aria-label="Link this cover letter to a saved job listing"
-        >
-          <option value="">None</option>
-          {savedJobs.map((j) => (
-            <option key={j.id} value={j.id}>
-              {j.title} — {j.company}
-            </option>
-          ))}
-        </select>
-        {savedJobs.length === 0 && (
-          <span className="cover-letter-job-link-hint">Save a job from the Job board or Applications first.</span>
-        )}
+        <div className="cover-letter-job-context">
+          <p className="cover-letter-job-summary" id="cover-letter-job-summary">
+            {linkedJob ? (
+              <>
+                <span className="cover-letter-job-summary-label">Targeting</span>{' '}
+                <strong>{linkedJob.title}</strong>
+                <span className="cover-letter-job-summary-sep"> — </span>
+                <span>{linkedJob.company}</span>
+              </>
+            ) : orphanedJobLink ? (
+              <>
+                <span className="cover-letter-job-summary-label">Linked job</span> no longer in your saved listings.
+                Choose another below or clear the link.
+              </>
+            ) : (
+              <>
+                <span className="cover-letter-job-summary-label">No saved job linked.</span> Paste a listing in chat or
+                link one below.
+              </>
+            )}
+          </p>
+          {savedJobs.length === 0 && (
+            <span className="cover-letter-job-link-hint">Save a job from the Job board or Applications first.</span>
+          )}
+          <div className="cover-letter-job-link-row">
+            <label htmlFor="cover-letter-tracked-job">Link to saved job</label>
+            <select
+              id="cover-letter-tracked-job"
+              value={trackedJobSelectValue}
+              onChange={onTrackedJobChange}
+              aria-label="Link this cover letter to a saved job listing"
+              aria-describedby="cover-letter-job-summary"
+            >
+              <option value="">None</option>
+              {savedJobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.title} — {j.company}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {historyDrawerOpen && (
