@@ -91,7 +91,7 @@ export function ManualApplicationSheet({ onLogged }: { onLogged: () => void }) {
             role card below to set interview stage, notes, and updates.
           </SheetDescription>
         </SheetHeader>
-        <form onSubmit={submit} className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
+        <form onSubmit={submit} className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5" aria-busy={saving}>
           {formError && (
             <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
               {formError}

@@ -98,7 +98,7 @@ export default function AuthForm() {
             </ul>
           </CardContent>
         </Card>
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" aria-busy={loading}>
           <div className="field-group">
             <label htmlFor="auth-email">Email</label>
             <input
@@ -124,10 +124,16 @@ export default function AuthForm() {
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             />
           </div>
-          {message && (
-            <p className={`auth-message ${messageIsError ? 'error' : ''}`}>{message}</p>
-          )}
-          <Button type="submit" disabled={loading} className="gap-2">
+          {message ? (
+            <p
+              className={`auth-message ${messageIsError ? 'error' : ''}`}
+              role={messageIsError ? 'alert' : 'status'}
+              aria-live={messageIsError ? 'assertive' : 'polite'}
+            >
+              {message}
+            </p>
+          ) : null}
+          <Button type="submit" disabled={loading} className="gap-2" aria-busy={loading}>
             {loading ? (
               <>
                 <RefreshCw className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden />

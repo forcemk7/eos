@@ -12,6 +12,7 @@ import {
 } from '@/app/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import type { DiscoverListingWithApply } from '@/lib/jobs/discoverListing'
+import { listingToSyncBody } from '@/lib/jobs/syncDiscoverListing'
 
 const STORAGE_KEY = 'earnOS_pending_apply'
 const MAX_PENDING_MS = 24 * 60 * 60 * 1000
@@ -25,21 +26,7 @@ type PendingPayload = {
   sawBlurOrHidden: boolean
 }
 
-export function listingToSyncBody(l: DiscoverListingWithApply) {
-  return {
-    external_id: l.external_id,
-    source: l.source,
-    title: l.title,
-    company: l.company,
-    url: l.url,
-    location: l.location,
-    remote: l.remote,
-    description: l.description,
-    snippet: l.snippet,
-    posted_at: l.posted_at,
-    raw: l.raw,
-  }
-}
+export { listingToSyncBody }
 
 function markPendingSawLeave() {
   try {
@@ -62,6 +49,7 @@ export function ApplyReturnPrompt({
   const [pending, setPending] = useState<PendingPayload | null>(null)
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     const onHiddenOrBlur = () => {
@@ -112,6 +100,7 @@ export function ApplyReturnPrompt({
   async function submitDecision(decision: 'applied' | 'not_applied' | 'later') {
     if (!pending || submitting) return
     setSubmitting(true)
+    setSubmitError(null)
     try {
       const res = await fetch(`/api/jobs/${pending.listingId}/apply-event`, {
         method: 'POST',
@@ -139,7 +128,7 @@ export function ApplyReturnPrompt({
       setNotes('')
     } catch (e) {
       console.error(e)
-      alert(e instanceof Error ? e.message : 'Failed to save')
+      setSubmitError(e instanceof Error ? e.message : 'Failed to save')
     } finally {
       setSubmitting(false)
     }
@@ -150,7 +139,10 @@ export function ApplyReturnPrompt({
       open={open}
       onOpenChange={(o) => {
         setOpen(o)
-        if (!o) setPending(null)
+        if (!o) {
+          setPending(null)
+          setSubmitError(null)
+        }
       }}
     >
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
@@ -161,9 +153,15 @@ export function ApplyReturnPrompt({
           </SheetDescription>
         </SheetHeader>
         <div className="mt-4 space-y-3">
-          <label className="block text-sm">
+          {submitError ? (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              {submitError}
+            </p>
+          ) : null}
+          <label className="block text-sm" htmlFor="apply-return-notes">
             <span className="text-muted-foreground">Notes (optional)</span>
             <textarea
+              id="apply-return-notes"
               className="mt-1 min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -172,13 +170,13 @@ export function ApplyReturnPrompt({
           </label>
         </div>
         <SheetFooter className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-start">
-          <Button disabled={submitting} onClick={() => submitDecision('applied')}>
+          <Button type="button" disabled={submitting} aria-busy={submitting} onClick={() => submitDecision('applied')}>
             Applied
           </Button>
-          <Button variant="secondary" disabled={submitting} onClick={() => submitDecision('not_applied')}>
+          <Button type="button" variant="secondary" disabled={submitting} aria-busy={submitting} onClick={() => submitDecision('not_applied')}>
             Didn&apos;t apply
           </Button>
-          <Button variant="outline" disabled={submitting} onClick={() => submitDecision('later')}>
+          <Button type="button" variant="outline" disabled={submitting} aria-busy={submitting} onClick={() => submitDecision('later')}>
             Later
           </Button>
         </SheetFooter>

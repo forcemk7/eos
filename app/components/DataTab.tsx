@@ -43,6 +43,7 @@ export default function DataTab({
 }: DataTabProps) {
   const [data, setData] = useState<ResumeData>(() => normalizedResumeData(initialData ?? undefined))
   const [saving, setSaving] = useState(false)
+  const [saveAnnounce, setSaveAnnounce] = useState('')
   const [uploadStatus, setUploadStatus] = useState('')
   const [uploadError, setUploadError] = useState(false)
   const [pastedText, setPastedText] = useState('')
@@ -66,6 +67,12 @@ export default function DataTab({
   useEffect(() => {
     setData(normalizedResumeData(initialData ?? undefined))
   }, [initialData])
+
+  useEffect(() => {
+    if (!saveAnnounce) return
+    const t = window.setTimeout(() => setSaveAnnounce(''), 2500)
+    return () => clearTimeout(t)
+  }, [saveAnnounce])
 
   function updateIdentity(field: keyof Omit<ResumeData['identity'], 'links'>, value: string) {
     setData((d) => ({ ...d, identity: { ...d.identity, [field]: value } }))
@@ -316,6 +323,7 @@ export default function DataTab({
     try {
       await onSave(data)
       setTargetProfileRefreshKey((k) => k + 1)
+      setSaveAnnounce('Profile saved.')
     } finally {
       setSaving(false)
     }
@@ -505,26 +513,27 @@ export default function DataTab({
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
         >
-          <button
-            type="button"
-            className="data-dropzone-compact"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="*/*"
-              className="data-file-input"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) ingestFile(f)
-                e.target.value = ''
-              }}
-            />
-            Upload file
-          </button>
-          <span className="data-upload-sep">or</span>
           <input
+            ref={fileInputRef}
+            id="data-profile-file-upload"
+            type="file"
+            accept="*/*"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) ingestFile(f)
+              e.target.value = ''
+            }}
+          />
+          <label htmlFor="data-profile-file-upload" className="data-dropzone-compact">
+            Upload file
+          </label>
+          <span className="data-upload-sep">or</span>
+          <label htmlFor="data-profile-paste" className="sr-only">
+            Paste resume text
+          </label>
+          <input
+            id="data-profile-paste"
             ref={pasteInputRef}
             type="text"
             className="data-paste-inline"
@@ -545,9 +554,15 @@ export default function DataTab({
         <p className="data-upload-purpose">
           Parsed fields feed job matching, your target profile, and tailored resumes and cover letters.
         </p>
-        {uploadStatus && (
-          <p className={uploadError ? 'data-upload-error' : 'data-upload-status'}>{uploadStatus}</p>
-        )}
+        {uploadStatus ? (
+          <p
+            className={uploadError ? 'data-upload-error' : 'data-upload-status'}
+            role={uploadError ? 'alert' : 'status'}
+            aria-live={uploadError ? 'assertive' : 'polite'}
+          >
+            {uploadStatus}
+          </p>
+        ) : null}
       </section>
 
       <TargetProfilePanel hasData={hasData} refreshKey={targetProfileRefreshKey} profileData={hasData ? data : null} />
@@ -557,9 +572,12 @@ export default function DataTab({
           <h2 className="app-section-title">Your profile</h2>
           {hasData && (
             <div className="data-actions">
-              <Button type="button" onClick={handleSave} disabled={saving}>
+              <Button type="button" onClick={handleSave} disabled={saving} aria-busy={saving}>
                 {saving ? 'Saving…' : 'Save'}
               </Button>
+              <span className="sr-only" aria-live="polite" aria-atomic="true">
+                {saveAnnounce}
+              </span>
               <span className="data-chunk-count">{totalChunks} pieces</span>
             </div>
           )}
@@ -578,13 +596,15 @@ export default function DataTab({
               Dashed outlines and small “Add …” labels mark fields we still need so job matching and tailored
               documents use complete, accurate facts.
             </p>
-            <div className="data-tabs" role="tablist">
+            <div className="data-tabs" role="tablist" aria-label="Profile sections">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
+                  id={`data-tab-${tab.id}`}
                   type="button"
                   role="tab"
                   aria-selected={activeTab === tab.id}
+                  aria-controls="data-tab-panel"
                   className={`data-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
                   onClick={() => setActiveTab(tab.id)}
                 >
@@ -592,7 +612,12 @@ export default function DataTab({
                 </button>
               ))}
             </div>
-            <div className="data-tab-panels">
+            <div
+              id="data-tab-panel"
+              role="tabpanel"
+              aria-labelledby={`data-tab-${activeTab}`}
+              className="data-tab-panels"
+            >
               {activeTab === 'contact' && <ContactPanel data={data} h={handlers} />}
               {activeTab === 'links' && <LinksPanel data={data} h={handlers} />}
               {activeTab === 'summary' && <SummaryPanel data={data} h={handlers} />}

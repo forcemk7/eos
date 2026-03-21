@@ -156,9 +156,13 @@ export function ExternalJobSheet({ onImported }: { onImported?: () => void }) {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex gap-1 border-b border-border/60 px-6 pt-2">
+        <div className="flex gap-1 border-b border-border/60 px-6 pt-2" role="tablist" aria-label="Import method">
           <button
             type="button"
+            role="tab"
+            id="ext-job-tab-paste"
+            aria-selected={mode === 'paste'}
+            aria-controls="ext-job-panel-paste"
             className={`rounded-t-lg px-3 py-2 text-sm font-medium ${
               mode === 'paste'
                 ? 'bg-muted text-foreground'
@@ -170,6 +174,10 @@ export function ExternalJobSheet({ onImported }: { onImported?: () => void }) {
           </button>
           <button
             type="button"
+            role="tab"
+            id="ext-job-tab-images"
+            aria-selected={mode === 'images'}
+            aria-controls="ext-job-panel-images"
             className={`rounded-t-lg px-3 py-2 text-sm font-medium ${
               mode === 'images'
                 ? 'bg-muted text-foreground'
@@ -181,8 +189,16 @@ export function ExternalJobSheet({ onImported }: { onImported?: () => void }) {
           </button>
         </div>
 
-        {mode === 'paste' ? (
-          <form onSubmit={submitPaste} className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
+        <>
+          <form
+            id="ext-job-panel-paste"
+            onSubmit={submitPaste}
+            className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5"
+            aria-busy={saving}
+            role="tabpanel"
+            aria-labelledby="ext-job-tab-paste"
+            hidden={mode !== 'paste'}
+          >
             {formError && (
               <p
                 className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -298,8 +314,15 @@ export function ExternalJobSheet({ onImported }: { onImported?: () => void }) {
               </Button>
             </div>
           </form>
-        ) : (
-          <form onSubmit={submitImages} className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
+          <form
+            id="ext-job-panel-images"
+            onSubmit={submitImages}
+            className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5"
+            aria-busy={saving}
+            role="tabpanel"
+            aria-labelledby="ext-job-tab-images"
+            hidden={mode !== 'images'}
+          >
             {formError && (
               <p
                 className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
@@ -312,13 +335,19 @@ export function ExternalJobSheet({ onImported }: { onImported?: () => void }) {
               Upload up to 4 screenshots of the job posting. We extract title, company, and description in-app, then save an
               off-platform listing.
             </p>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              multiple
-              className="text-sm"
-              onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))}
-            />
+            <div className="space-y-1.5">
+              <label htmlFor="ext-job-screenshots" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Screenshot files
+              </label>
+              <input
+                id="ext-job-screenshots"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                className="text-sm"
+                onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))}
+              />
+            </div>
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
               <input
                 type="checkbox"
@@ -339,7 +368,7 @@ export function ExternalJobSheet({ onImported }: { onImported?: () => void }) {
               </Button>
             </div>
           </form>
-        )}
+        </>
       </SheetContent>
     </Sheet>
   )

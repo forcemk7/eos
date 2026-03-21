@@ -5,6 +5,7 @@ import { LayoutDashboard, Database, Briefcase, Sparkles, FileText, FileCode, Git
 import { cn } from '@/lib/utils'
 import { navItemCopy, type NavTabKey } from '@/lib/navCopy'
 import { Button } from '@/app/components/ui/button'
+import { ThemeToggle } from '@/app/components/theme-toggle'
 import {
   Sheet,
   SheetContent,
@@ -99,16 +100,6 @@ export function AppSidebar({
   sheetOpen = false,
   onSheetOpenChange,
 }: AppSidebarProps) {
-  React.useEffect(() => {
-    if (!sheetOpen || onSheetOpenChange == null) return
-    const html = document.documentElement
-    const prev = html.style.overflow
-    html.style.overflow = 'hidden'
-    return () => {
-      html.style.overflow = prev
-    }
-  }, [sheetOpen, onSheetOpenChange])
-
   const navContent = (
     <NavContent
       currentTab={currentTab}
@@ -124,6 +115,7 @@ export function AppSidebar({
     <>
       {/* Desktop sidebar: fixed left, hidden on mobile */}
       <aside
+        aria-label="Site"
         className={cn(
           'hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-[15.5rem] md:border-r md:border-border/50 md:bg-card z-30'
         )}
@@ -137,7 +129,11 @@ export function AppSidebar({
         <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
           {navContent}
         </div>
-        <div className="p-3 border-t border-border shrink-0">
+        <div className="p-3 border-t border-border shrink-0 flex flex-col gap-1">
+          <div className="flex items-center gap-1">
+            <ThemeToggle className="min-h-[44px] min-w-[44px]" />
+            <span className="text-xs text-muted-foreground">Theme</span>
+          </div>
           <Button variant="ghost" className="w-full justify-start gap-3 font-normal min-h-[44px] py-3 transition-colors duration-150 hover:bg-muted/80" onClick={onSignOut}>
             <LogOut className="h-4 w-4 shrink-0" />
             Sign out
@@ -145,16 +141,9 @@ export function AppSidebar({
         </div>
       </aside>
 
-      {/* Mobile: non-modal sheet — no focus trap; scrim/scroll lock handled in sheet + effect. */}
       {onSheetOpenChange != null && (
-        <Sheet modal={false} open={sheetOpen} onOpenChange={onSheetOpenChange}>
-          <SheetContent
-            side="left"
-            className="w-[17rem] max-w-[85vw] p-0 flex flex-col"
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            onInteractOutside={(e) => e.preventDefault()}
-            onPointerDownOutside={(e) => e.preventDefault()}
-          >
+        <Sheet open={sheetOpen} onOpenChange={onSheetOpenChange}>
+          <SheetContent side="left" className="w-[17rem] max-w-[85vw] p-0 flex flex-col">
             <SheetHeader className="p-4 pt-[max(1rem,env(safe-area-inset-top))] border-b border-border text-left space-y-1">
               <SheetTitle className="flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-[10px] font-bold tracking-wide">
@@ -167,7 +156,11 @@ export function AppSidebar({
             <div className="flex-1 overflow-y-auto overscroll-y-contain p-3 flex flex-col gap-4">
               {navContent}
             </div>
-            <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-border shrink-0">
+            <div className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-border shrink-0 flex flex-col gap-1">
+              <div className="flex items-center gap-1 px-1">
+                <ThemeToggle className="min-h-[44px] min-w-[44px]" />
+                <span className="text-xs text-muted-foreground">Theme</span>
+              </div>
               <Button variant="ghost" className="w-full justify-start gap-3 font-normal min-h-[44px] py-3 transition-colors duration-150 hover:bg-muted/80" onClick={onSignOut}>
                 <LogOut className="h-4 w-4 shrink-0" />
                 Sign out
