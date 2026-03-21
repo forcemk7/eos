@@ -18,6 +18,7 @@ import type { JobListingRow } from '@/lib/jobs/jobListingRow'
 import type { ApplicationReportMeta } from '@/lib/jobs/applicationReportMeta'
 import { ApplicationInsights } from '@/app/components/applications/ApplicationInsights'
 import { ManualApplicationSheet } from '@/app/components/applications/ManualApplicationSheet'
+import { ExternalJobSheet } from '@/app/components/jobs/ExternalJobSheet'
 import {
   listingMatchesSankeyFilter,
   SANKEY_FILTER_ALL_APPLIED,
@@ -64,6 +65,11 @@ function eventLabel(type: string, details: Record<string, unknown>): string {
       if (n) return applied ? `Logged off-platform · applied · ${n}` : `Logged off-platform · tracking · ${n}`
       return applied ? 'Logged off-platform (submitted application)' : 'Logged off-platform (saved role)'
     }
+    case 'imported_external': {
+      const n = typeof details.note === 'string' ? details.note.trim() : ''
+      if (n) return `Imported external listing · ${n}`
+      return 'Imported external listing into eOS'
+    }
     case 'apply_outbound_click':
       return 'Opened external apply link from eOS'
     case 'apply_decision': {
@@ -93,6 +99,8 @@ function eventDotClass(type: string): string {
       return 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.2)]'
     case 'manual_entry':
       return 'bg-violet-500 shadow-[0_0_0_3px_rgba(139,92,246,0.2)]'
+    case 'imported_external':
+      return 'bg-indigo-500 shadow-[0_0_0_3px_rgba(99,102,241,0.25)]'
     case 'pipeline_note':
       return 'bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.2)]'
     case 'pipeline_stage_change':
@@ -528,6 +536,7 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
               </p>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-2">
+              <ExternalJobSheet onImported={load} />
               <ManualApplicationSheet onLogged={load} />
               <Button type="button" variant="outline" size="default" onClick={load} disabled={loading} className="gap-2">
                 <RefreshCw

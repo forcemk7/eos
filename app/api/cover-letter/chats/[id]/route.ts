@@ -1,5 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServerSupabase } from '@/lib/supabase/server'
+
+async function userOwnsJobListing(
+  supabase: SupabaseClient,
+  userId: string,
+  jobListingId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('job_listings')
+    .select('id')
+    .eq('id', jobListingId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  return !!data
+}
 
 const BUCKET = 'cover-letter'
 const SIGNED_URL_EXPIRY_SEC = 3600
@@ -22,7 +37,7 @@ export async function GET(
   try {
     const { data: chat, error: chatError } = await supabase
       .from('cover_letter_chats')
-      .select('id, title, created_at, updated_at')
+      .select('id, title, job_listing_id, created_at, updated_at')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
@@ -88,24 +103,52 @@ export async function PATCH(
     return NextResponse.json({ success: false, error: 'Chat id required.' }, { status: 400 })
   }
 
-  let body: { title?: unknown }
+  let body: { title?: unknown; job_listing_id?: unknown }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ success: false, error: 'Invalid JSON.' }, { status: 400 })
   }
 
-  const title = typeof body.title === 'string' ? body.title.trim().slice(0, 200) : null
-  if (title === null) {
-    return NextResponse.json({ success: false, error: 'title (string) required.' }, { status: 400 })
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+
+  if (body.title !== undefined) {
+    if (typeof body.title !== 'string') {
+      return NextResponse.json({ success: false, error: 'title must be a string.' }, { status: 400 })
+    }
+    updates.title = body.title.trim().slice(0, 200) || 'Untitled'
+  }
+
+  if (body.job_listing_id !== undefined) {
+    if (body.job_listing_id === null) {
+      updates.job_listing_id = null
+    } else if (typeof body.job_listing_id === 'string' && body.job_listing_id.trim()) {
+      const ok = await userOwnsJobListing(supabase, user.id, body.job_listing_id.trim())
+      if (!ok) {
+        return NextResponse.json({ success: false, error: 'Job listing not found.' }, { status: 400 })
+      }
+      updates.job_listing_id = body.job_listing_id.trim()
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'job_listing_id must be a non-empty string or null.' },
+        { status: 400 }
+      )
+    }
+  }
+
+  if (Object.keys(updates).length <= 1) {
+    return NextResponse.json(
+      { success: false, error: 'Provide title and/or job_listing_id to update.' },
+      { status: 400 }
+    )
   }
 
   const { data, error } = await supabase
     .from('cover_letter_chats')
-    .update({ title, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq('id', id)
     .eq('user_id', user.id)
-    .select('id, title, updated_at')
+    .select('id, title, job_listing_id, updated_at')
     .single()
 
   if (error) {

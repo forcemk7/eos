@@ -89,3 +89,24 @@ When ingesting parsed data (e.g. new resume) into an existing profile, the app a
 - **Additional:** Merge by section title. If section exists, append new items to content[]; if new title, append new section.
 
 See `mergeIntoProfile` in `lib/profileDb.ts` for implementation.
+
+---
+
+## Job listings (`job_listings`)
+
+Saved opportunities per user (manual add, off-platform import, discover sync, etc.). RLS: rows are scoped to `user_id`.
+
+| Column | Role |
+|--------|------|
+| `source` | Origin discriminator: e.g. `off_platform`, `manual`, `jsearch` (discover). |
+| `external_id` | Optional id from upstream API; unique with `(user_id, source)` when set. |
+| `title`, `company`, `url`, `location`, `remote` | Display and apply link. |
+| `description`, `snippet` | JD text for search, fit, and tailoring. |
+| `raw` | JSON metadata (`origin`, `import_method`, aggregator payloads, etc.). |
+| Apply / pipeline columns | See T6 migration: outbound timestamps, decisions, notes, `pipeline_stage`. |
+
+**Convention:** use `source = 'off_platform'` when the role was found outside eOS and imported or extracted into a stub. Use `raw.origin = 'off_platform'` alongside other `source` values only if you need a finer-grained label; the app prefers explicit `source` for queries.
+
+**Cover letters:** optional `cover_letter_chats.job_listing_id` → `job_listings(id)` links a chat thread to a tracked listing (ON DELETE SET NULL).
+
+See [T7_OFF_PLATFORM_WORKFLOW.md](./T7_OFF_PLATFORM_WORKFLOW.md) for API steps.

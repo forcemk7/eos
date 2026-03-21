@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServerSupabase, jsonWithCookies } from '@/lib/supabase/server'
 import { assembleProfile, syncProfile } from '@/lib/profileDb'
 import type { AssembledProfilePayload } from '@/lib/profile'
 import { legacyToAssembled, legacyToPayload } from '@/lib/profile'
+import { mapRowToVersionTailoring, truncateJdSnapshot, type ResumeTailoringPayload } from '@/lib/resumeTailoring'
 
 type ParsedInput = Record<string, unknown> & {
   identity?: Record<string, unknown>
@@ -77,6 +79,64 @@ function normalizePayload(body: { parsed?: unknown } | ParsedInput): AssembledPr
   return { identity: identityOnly, links, summary, experience, education, achievements, skills, languages, additional }
 }
 
+async function resolveTailoringForInsert(
+  supabase: SupabaseClient,
+  userId: string,
+  raw: unknown
+): Promise<
+  | {
+      job_listing_id: string | null
+      tailored_title: string | null
+      tailored_company: string | null
+      tailored_url: string | null
+      jd_snapshot: string | null
+      tailored_source_tab: string | null
+    }
+  | { error: string; status: number }
+> {
+  if (raw == null || typeof raw !== 'object') {
+    return {
+      job_listing_id: null,
+      tailored_title: null,
+      tailored_company: null,
+      tailored_url: null,
+      jd_snapshot: null,
+      tailored_source_tab: null,
+    }
+  }
+  const t = raw as ResumeTailoringPayload
+  const title = typeof t.title === 'string' ? t.title.trim() || null : null
+  const company = typeof t.company === 'string' ? t.company.trim() || null : null
+  const url = typeof t.url === 'string' ? t.url.trim() || null : null
+  const jdRaw = typeof t.jd_snapshot === 'string' ? t.jd_snapshot.trim() : ''
+  const jd_snapshot = jdRaw ? truncateJdSnapshot(jdRaw) : null
+  const tailored_source_tab =
+    t.source_tab === 'jobs' || t.source_tab === 'ai-jobs' ? t.source_tab : null
+
+  let job_listing_id: string | null = null
+  if (typeof t.job_listing_id === 'string' && t.job_listing_id.trim()) {
+    const id = t.job_listing_id.trim()
+    const { data: row, error } = await supabase
+      .from('job_listings')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) return { error: error.message, status: 500 }
+    if (!row) return { error: 'Invalid job_listing_id', status: 400 }
+    job_listing_id = id
+  }
+
+  return {
+    job_listing_id,
+    tailored_title: title,
+    tailored_company: company,
+    tailored_url: url,
+    jd_snapshot,
+    tailored_source_tab,
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { user, response, supabase } = await createServerSupabase(req)
   if (!user) {
@@ -88,7 +148,11 @@ export async function GET(req: NextRequest) {
 
     const { data: resumeRows, error } = await supabase
       .from('resumes')
-      .select('id, created_at, file_name, parsed_data')
+      .select(
+        `id, created_at, file_name, parsed_data,
+         job_listing_id, tailored_title, tailored_company, tailored_url, jd_snapshot, tailored_source_tab,
+         job_listings ( external_id, source, title, company, url )`
+      )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
@@ -97,11 +161,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    const versions = (resumeRows ?? []).map((v) => ({
-      id: v.id,
-      created_at: v.created_at,
-      file_name: v.file_name,
-    }))
+    const versions = (resumeRows ?? []).map((v) => {
+      const tailoring = mapRowToVersionTailoring({
+        job_listing_id: v.job_listing_id ?? null,
+        tailored_title: v.tailored_title ?? null,
+        tailored_company: v.tailored_company ?? null,
+        tailored_url: v.tailored_url ?? null,
+        tailored_source_tab: v.tailored_source_tab ?? null,
+        job_listings: v.job_listings as unknown,
+      })
+      return {
+        id: v.id,
+        created_at: v.created_at,
+        file_name: v.file_name,
+        tailoring,
+      }
+    })
 
     let current: { id: string; created_at: string; file_name?: string; parsed_data: unknown } | null = null
 
@@ -157,8 +232,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Failed to sync profile' }, { status: 500 })
     }
 
+    const tailoringResult = await resolveTailoringForInsert(supabase, user.id, body.tailoring)
+    if ('error' in tailoringResult) {
+      return NextResponse.json(
+        { success: false, error: tailoringResult.error },
+        { status: tailoringResult.status }
+      )
+    }
+
     const resumeId = uuidv4()
-    await supabase.from('resumes').insert({
+    const { error: insErr } = await supabase.from('resumes').insert({
       id: resumeId,
       user_id: user.id,
       version: 1,
@@ -166,7 +249,12 @@ export async function POST(req: NextRequest) {
       parsed_data: assembled,
       file_name: body.fileName ?? body.file_name ?? 'resume.pdf',
       storage_path: null,
+      ...tailoringResult,
     })
+    if (insErr) {
+      console.error('resume insert:', insErr)
+      return NextResponse.json({ success: false, error: insErr.message }, { status: 500 })
+    }
 
     return jsonWithCookies(
       {

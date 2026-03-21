@@ -17,6 +17,7 @@ import {
   type FilterChip,
   type JobSort,
 } from '@/app/components/jobs'
+import { ExternalJobSheet } from '@/app/components/jobs/ExternalJobSheet'
 
 export type { DiscoverListing, DiscoverListingWithApply }
 
@@ -101,9 +102,17 @@ function dedupeAppend(
 
 interface JobsTabProps {
   onOpenDataTab?: () => void
+  focusStableExternalId?: string | null
+  onFocusListingConsumed?: () => void
+  onStartTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
-export default function JobsTab({ onOpenDataTab }: JobsTabProps) {
+export default function JobsTab({
+  onOpenDataTab,
+  focusStableExternalId,
+  onFocusListingConsumed,
+  onStartTailorResume,
+}: JobsTabProps) {
   const [q, setQ] = useState('')
   const [location, setLocation] = useState('')
   const [remoteOnly, setRemoteOnly] = useState(true)
@@ -284,19 +293,26 @@ export default function JobsTab({ onOpenDataTab }: JobsTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <JobFilterBar
-            variant="manual"
-            q={q}
-            onQChange={setQ}
-            location={location}
-            onLocationChange={setLocation}
-            remoteOnly={remoteOnly}
-            onRemoteOnlyChange={setRemoteOnly}
-            onSearch={handleSearch}
-            loading={loading}
-            usageText={usageText}
-            searchInputRef={searchInputRef}
-          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <JobFilterBar
+                variant="manual"
+                q={q}
+                onQChange={setQ}
+                location={location}
+                onLocationChange={setLocation}
+                remoteOnly={remoteOnly}
+                onRemoteOnlyChange={setRemoteOnly}
+                onSearch={handleSearch}
+                loading={loading}
+                usageText={usageText}
+                searchInputRef={searchInputRef}
+              />
+            </div>
+            <div className="flex shrink-0 justify-end pb-1">
+              <ExternalJobSheet />
+            </div>
+          </div>
 
           {quotaBlocked && <JobQuotaState used={usage!.used} limit={usage!.limit} />}
 
@@ -334,6 +350,10 @@ export default function JobsTab({ onOpenDataTab }: JobsTabProps) {
                     checkAllTrigger={checkAllTrigger ?? undefined}
                     onPatchListing={patchListing}
                     onOpenDataTab={onOpenDataTab}
+                    focusStableExternalId={focusStableExternalId}
+                    onFocusConsumed={onFocusListingConsumed}
+                    listingsLoading={loading}
+                    onTailorResume={onStartTailorResume}
                   />
                   {hasMore && (
                     <div className="flex justify-center pt-2">

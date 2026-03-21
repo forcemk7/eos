@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
   const { data: chat, error: chatErr } = await supabase
     .from('cover_letter_chats')
-    .select('id, title')
+    .select('id, title, job_listing_id')
     .eq('id', chatId)
     .eq('user_id', user.id)
     .single()
@@ -110,9 +110,39 @@ export async function POST(req: NextRequest) {
   }
   const profileSummary = buildProfileSummaryForLLM(profile)
 
+  let listingBlock = ''
+  const jlId = (chat as { job_listing_id?: string | null }).job_listing_id
+  if (jlId) {
+    const { data: jl } = await supabase
+      .from('job_listings')
+      .select('title, company, url, location, remote, description, snippet')
+      .eq('id', jlId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (jl) {
+      const parts: string[] = []
+      if (jl.title) parts.push(`Title: ${jl.title}`)
+      if (jl.company) parts.push(`Company: ${jl.company}`)
+      if (jl.url) parts.push(`URL: ${jl.url}`)
+      if (jl.location) parts.push(`Location: ${jl.location}`)
+      if (jl.remote) parts.push('Remote: Yes')
+      const body = (jl.description as string | null)?.trim() || (jl.snippet as string | null)?.trim() || ''
+      const max = 12_000
+      if (body) {
+        parts.push(
+          '\nDescription:\n' + (body.length > max ? body.slice(0, max) + '\n[Truncated.]' : body)
+        )
+      }
+      listingBlock = parts.join('\n')
+    }
+  }
+
   const resolvedMessages = await resolveStoragePathsInMessages(messages, supabase)
   const modelMessages = await convertToModelMessages(resolvedMessages)
-  const systemContent = `${SYSTEM_PROMPT_COVER}\n\nCandidate profile:\n\n${profileSummary}`
+  let systemContent = `${SYSTEM_PROMPT_COVER}\n\nCandidate profile:\n\n${profileSummary}`
+  if (listingBlock) {
+    systemContent += `\n\nRegistered job listing (use for role/company/requirements; user may also paste updates in the thread):\n${listingBlock}`
+  }
 
   const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const result = streamText({

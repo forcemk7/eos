@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useChat, type UIMessage } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 
@@ -347,6 +347,7 @@ function CoverLetterChatView({
 interface ChatItem {
   id: string
   title: string | null
+  job_listing_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -402,10 +403,18 @@ export default function CoverLetterTab() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const fullscreenRef = useRef<HTMLDivElement>(null)
   const sessionInitialized = useRef(false)
+  const [savedJobs, setSavedJobs] = useState<Array<{ id: string; title: string; company: string }>>([])
+  const [jobLinkForNewChat, setJobLinkForNewChat] = useState('')
 
   const filteredChats = historySearch.trim()
     ? chats.filter((c) => (c.title ?? 'Untitled').toLowerCase().includes(historySearch.trim().toLowerCase()))
     : chats
+
+  const trackedJobSelectValue = useMemo(() => {
+    if (!currentChatId) return jobLinkForNewChat
+    const meta = chats.find((c) => c.id === currentChatId)
+    return meta?.job_listing_id ?? ''
+  }, [currentChatId, chats, jobLinkForNewChat])
 
   const loadChats = useCallback(async () => {
     setLoadingChats(true)
@@ -425,6 +434,29 @@ export default function CoverLetterTab() {
   useEffect(() => {
     loadChats()
   }, [loadChats])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/jobs', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        const listings = (data.listings ?? []) as Array<{ id: string; title?: string; company?: string }>
+        setSavedJobs(
+          listings.map((l) => ({
+            id: l.id,
+            title: (l.title || 'Untitled').trim() || 'Untitled',
+            company: (l.company || '—').trim() || '—',
+          }))
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setSavedJobs([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // First time opening Cover letter this session → auto-create a new chat. Tab/app switch → restore last chat.
   useEffect(() => {
@@ -506,13 +538,39 @@ export default function CoverLetterTab() {
     }
   }
 
+  async function onTrackedJobChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const v = e.target.value
+    if (!currentChatId) {
+      setJobLinkForNewChat(v)
+      return
+    }
+    setError(null)
+    try {
+      const res = await fetch(`/api/cover-letter/chats/${currentChatId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ job_listing_id: v || null }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Update failed')
+      setChats((prev) =>
+        prev.map((c) => (c.id === currentChatId ? { ...c, job_listing_id: v || null } : c))
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Update failed')
+    }
+  }
+
   async function handleNewChat() {
     setError(null)
     try {
+      const body =
+        jobLinkForNewChat.trim() !== '' ? { job_listing_id: jobLinkForNewChat.trim() } : {}
       const res = await fetch('/api/cover-letter/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(body),
         credentials: 'include',
       })
       const data = await res.json()
@@ -522,6 +580,7 @@ export default function CoverLetterTab() {
       setCurrentChatId(chat.id)
       setLoadedMessages([])
       persistLastChatId(chat.id)
+      setJobLinkForNewChat('')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create chat')
     }
@@ -639,6 +698,26 @@ export default function CoverLetterTab() {
           </button>
         </div>
       </header>
+
+      <div className="cover-letter-job-link-bar">
+        <label htmlFor="cover-letter-tracked-job">Tracked job</label>
+        <select
+          id="cover-letter-tracked-job"
+          value={trackedJobSelectValue}
+          onChange={onTrackedJobChange}
+          aria-label="Link this cover letter to a saved job listing"
+        >
+          <option value="">None</option>
+          {savedJobs.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.title} — {j.company}
+            </option>
+          ))}
+        </select>
+        {savedJobs.length === 0 && (
+          <span className="cover-letter-job-link-hint">Save a job from the Job board or Applications first.</span>
+        )}
+      </div>
 
       {historyDrawerOpen && (
         <>
