@@ -107,6 +107,8 @@ interface JobsTabProps {
   focusStableExternalId?: string | null
   onFocusListingConsumed?: () => void
   onStartTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
+  onStartCoverLetterFromListing?: (job: DiscoverListingWithApply) => void | Promise<void>
+  onOpenApplicationsForListing?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
 export default function JobsTab({
@@ -114,6 +116,8 @@ export default function JobsTab({
   focusStableExternalId,
   onFocusListingConsumed,
   onStartTailorResume,
+  onStartCoverLetterFromListing,
+  onOpenApplicationsForListing,
 }: JobsTabProps) {
   const [q, setQ] = useState('')
   const [location, setLocation] = useState('')
@@ -355,6 +359,8 @@ export default function JobsTab({
                     onFocusConsumed={onFocusListingConsumed}
                     listingsLoading={loading}
                     onTailorResume={onStartTailorResume}
+                    onStartCoverLetter={onStartCoverLetterFromListing}
+                    onOpenApplications={onOpenApplicationsForListing}
                   />
                   {hasMore && (
                     <div className="flex justify-center pt-2">

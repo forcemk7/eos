@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   ExternalLink,
   RefreshCw,
@@ -20,6 +20,7 @@ import type { ApplicationReportMeta } from '@/lib/jobs/applicationReportMeta'
 import { ApplicationInsights } from '@/app/components/applications/ApplicationInsights'
 import { ManualApplicationSheet } from '@/app/components/applications/ManualApplicationSheet'
 import { ExternalJobSheet } from '@/app/components/jobs/ExternalJobSheet'
+import { useTheme } from 'next-themes'
 import {
   buildStageFilterOptions,
   listingMatchesSankeyFilter,
@@ -32,6 +33,7 @@ import {
   pipelineStageLabel,
   pipelineStageColor,
   resolveDisplayStage,
+  type PipelineColorMode,
 } from '@/lib/jobs/pipelineTaxonomy'
 import { cn } from '@/lib/utils'
 
@@ -46,6 +48,8 @@ interface ApplicationEventRow {
 export interface ApplicationsTabProps {
   onBrowseJobs?: () => void
   onBrowseRecommended?: () => void
+  focusListingId?: string | null
+  onFocusListingConsumed?: () => void
 }
 
 function formatWhen(iso: string) {
@@ -251,12 +255,16 @@ function ListingPipelineCard({
   events,
   onNoteAdded,
   eventsReady,
+  highlight,
 }: {
   listing: JobListingRow
   events: ApplicationEventRow[]
   onNoteAdded: () => void
   eventsReady: boolean
+  highlight?: boolean
 }) {
+  const { resolvedTheme } = useTheme()
+  const pipelineColorMode: PipelineColorMode = resolvedTheme === 'light' ? 'light' : 'dark'
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const displayStageKey = useMemo(
@@ -299,8 +307,13 @@ function ListingPipelineCard({
   }
 
   return (
-    <li>
-      <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all duration-200 hover:border-border hover:shadow-md">
+    <li id={`applications-listing-${listing.id}`}>
+      <div
+        className={cn(
+          'group relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all duration-200 hover:border-border hover:shadow-md',
+          highlight && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-background'
+        )}
+      >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:gap-5">
           <div
@@ -322,7 +335,7 @@ function ListingPipelineCard({
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span
                 className="h-2 w-2 shrink-0 rounded-full ring-2 ring-background"
-                style={{ backgroundColor: pipelineStageColor(displayStageKey) }}
+                style={{ backgroundColor: pipelineStageColor(displayStageKey, pipelineColorMode) }}
                 aria-hidden
               />
               <span className="text-muted-foreground">Pipeline status</span>
@@ -446,13 +459,24 @@ function SchemaBanner({ meta }: { meta: ApplicationReportMeta | null }) {
   )
 }
 
-export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: ApplicationsTabProps) {
+export default function ApplicationsTab({
+  onBrowseJobs,
+  onBrowseRecommended,
+  focusListingId = null,
+  onFocusListingConsumed,
+}: ApplicationsTabProps) {
   const [listings, setListings] = useState<JobListingRow[]>([])
   const [events, setEvents] = useState<ApplicationEventRow[]>([])
   const [meta, setMeta] = useState<ApplicationReportMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filterStageId, setFilterStageId] = useState<string | null>(null)
+  const [pipelineContextBanner, setPipelineContextBanner] = useState<{
+    title: string
+    company: string
+  } | null>(null)
+  const [highlightListingId, setHighlightListingId] = useState<string | null>(null)
+  const pipelineFocusHandledRef = useRef<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -492,6 +516,52 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    if (!focusListingId) {
+      pipelineFocusHandledRef.current = null
+    }
+  }, [focusListingId])
+
+  useEffect(() => {
+    if (!focusListingId || loading) return
+    if (pipelineFocusHandledRef.current === focusListingId) return
+    const L = listings.find((l) => l.id === focusListingId)
+    if (!L) return
+
+    pipelineFocusHandledRef.current = focusListingId
+    setFilterStageId(null)
+    setPipelineContextBanner({
+      title: (L.title || 'Untitled').trim() || 'Untitled',
+      company: (L.company || '—').trim() || '—',
+    })
+    setHighlightListingId(focusListingId)
+
+    let raf = 0
+    const t1 = window.setTimeout(() => {
+      raf = window.requestAnimationFrame(() => {
+        document.getElementById(`applications-listing-${focusListingId}`)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        })
+      })
+    }, 100)
+
+    const t2 = window.setTimeout(() => {
+      onFocusListingConsumed?.()
+    }, 400)
+
+    const t3 = window.setTimeout(() => {
+      setHighlightListingId((id) => (id === focusListingId ? null : id))
+    }, 2800)
+
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [focusListingId, loading, listings, onFocusListingConsumed])
 
   const eventsByListing = useMemo(() => {
     const m = new Map<string, ApplicationEventRow[]>()
@@ -705,17 +775,43 @@ export default function ApplicationsTab({ onBrowseJobs, onBrowseRecommended }: A
                   No roles in this stage. Clear the filter or choose another stage.
                 </p>
               ) : (
-                <ul className="space-y-5">
-                  {filteredListings.map((listing) => (
-                    <ListingPipelineCard
-                      key={listing.id}
-                      listing={listing}
-                      events={eventsByListing.get(listing.id) ?? []}
-                      onNoteAdded={load}
-                      eventsReady={eventsReady}
-                    />
-                  ))}
-                </ul>
+                <>
+                  {pipelineContextBanner && (
+                    <div
+                      className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm"
+                      role="status"
+                    >
+                      <p className="m-0 text-foreground">
+                        <span className="font-medium text-muted-foreground">Showing pipeline for </span>
+                        <strong>{pipelineContextBanner.title}</strong>
+                        <span className="text-muted-foreground"> · </span>
+                        <span>{pipelineContextBanner.company}</span>
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 shrink-0 gap-1 text-muted-foreground"
+                        onClick={() => setPipelineContextBanner(null)}
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden />
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+                  <ul className="space-y-5">
+                    {filteredListings.map((listing) => (
+                      <ListingPipelineCard
+                        key={listing.id}
+                        listing={listing}
+                        events={eventsByListing.get(listing.id) ?? []}
+                        onNoteAdded={load}
+                        eventsReady={eventsReady}
+                        highlight={highlightListingId === listing.id}
+                      />
+                    ))}
+                  </ul>
+                </>
               )}
             </section>
           )}

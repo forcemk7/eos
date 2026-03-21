@@ -81,6 +81,8 @@ interface AIJobsTabProps {
   focusStableExternalId?: string | null
   onFocusListingConsumed?: () => void
   onStartTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
+  onStartCoverLetterFromListing?: (job: DiscoverListingWithApply) => void | Promise<void>
+  onOpenApplicationsForListing?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
 export default function AIJobsTab({
@@ -88,6 +90,8 @@ export default function AIJobsTab({
   focusStableExternalId,
   onFocusListingConsumed,
   onStartTailorResume,
+  onStartCoverLetterFromListing,
+  onOpenApplicationsForListing,
 }: AIJobsTabProps) {
   const [aiListings, setAiListings] = useState<DiscoverListingWithApply[]>([])
   const [aiLoading, setAiLoading] = useState(false)
@@ -316,6 +320,8 @@ export default function AIJobsTab({
                     onFocusConsumed={onFocusListingConsumed}
                     listingsLoading={aiLoading}
                     onTailorResume={onStartTailorResume}
+                    onStartCoverLetter={onStartCoverLetterFromListing}
+                    onOpenApplications={onOpenApplicationsForListing}
                   />
                   {hasMore && (
                     <div className="flex justify-center pt-2">

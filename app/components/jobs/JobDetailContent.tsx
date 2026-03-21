@@ -17,6 +17,8 @@ interface JobDetailContentProps {
   onPatchListing: (stable_external_id: string, patch: Partial<DiscoverListingWithApply>) => void
   onOpenDataTab?: () => void
   onTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
+  onStartCoverLetter?: (job: DiscoverListingWithApply) => void | Promise<void>
+  onOpenApplications?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
 export function JobDetailContent({
@@ -27,8 +29,12 @@ export function JobDetailContent({
   onPatchListing,
   onOpenDataTab,
   onTailorResume,
+  onStartCoverLetter,
+  onOpenApplications,
 }: JobDetailContentProps) {
   const [tailorBusy, setTailorBusy] = useState(false)
+  const [coverBusy, setCoverBusy] = useState(false)
+  const [applicationsBusy, setApplicationsBusy] = useState(false)
   const title = job.title || 'Untitled'
   const posted = formatPostedRelative(job.posted_at)
   const source = formatSourceLabel(job.source)
@@ -52,6 +58,26 @@ export function JobDetailContent({
       setTailorBusy(false)
     }
   }, [job, onTailorResume, tailorBusy])
+
+  const handleCoverLetter = useCallback(async () => {
+    if (!onStartCoverLetter || coverBusy) return
+    setCoverBusy(true)
+    try {
+      await onStartCoverLetter(job)
+    } finally {
+      setCoverBusy(false)
+    }
+  }, [job, onStartCoverLetter, coverBusy])
+
+  const handleApplications = useCallback(async () => {
+    if (!onOpenApplications || applicationsBusy) return
+    setApplicationsBusy(true)
+    try {
+      await onOpenApplications(job)
+    } finally {
+      setApplicationsBusy(false)
+    }
+  }, [job, onOpenApplications, applicationsBusy])
 
   const headerInner = (
     <>
@@ -150,6 +176,28 @@ export function JobDetailContent({
               onClick={handleTailorResume}
             >
               {tailorBusy ? 'Opening…' : 'Tailor resume to listing'}
+            </Button>
+          ) : null}
+          {onStartCoverLetter ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1 sm:flex-none"
+              disabled={coverBusy}
+              onClick={() => void handleCoverLetter()}
+            >
+              {coverBusy ? 'Opening…' : 'Draft cover letter'}
+            </Button>
+          ) : null}
+          {onOpenApplications ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              disabled={applicationsBusy}
+              onClick={() => void handleApplications()}
+            >
+              {applicationsBusy ? 'Opening…' : 'View in pipeline'}
             </Button>
           ) : null}
           {job.url ? (

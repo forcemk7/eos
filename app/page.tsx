@@ -14,12 +14,11 @@ import CoverLetterTab from './components/CoverLetterTab'
 import { AppSidebar, type Tab } from './components/AppSidebar'
 import { AppTopBar } from './components/AppTopBar'
 import { Dashboard } from './components/Dashboard'
-import { AppShell, AppLoadingBlock } from './components/shell'
+import { AppShell, AppLoadingBlock, AppErrorState } from './components/shell'
+import { humanizeFetchError } from '@/lib/humanizeFetchError'
 import { WorkflowGuideStrip } from './components/WorkflowGuideStrip'
-import { listingToSyncBody } from './components/jobs/ApplyTracking'
-import { stableExternalId } from '@/lib/jobs/stableExternalId'
+import { ensureDiscoverListingSynced } from '@/lib/jobs/syncDiscoverListing'
 import { jdTextFromListing, type DiscoverListingWithApply } from '@/lib/jobs/discoverListing'
-import type { JobListingRow } from '@/lib/jobs/jobListingRow'
 import type {
   JobsBoardTab,
   ResumeVersionTailoring,
@@ -42,6 +41,7 @@ export default function Home() {
   const [current, setCurrent] = useState<ResumeVersion | null>(null)
   const [versions, setVersions] = useState<ResumeVersion[]>([])
   const [loading, setLoading] = useState(true)
+  const [resumeLoadError, setResumeLoadError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('dashboard')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [dataIncompleteCount, setDataIncompleteCount] = useState(0)
@@ -51,6 +51,12 @@ export default function Home() {
     stable_external_id: string
     tab: JobsBoardTab
   } | null>(null)
+  const [coverLetterListingIntent, setCoverLetterListingIntent] = useState<{
+    listingId: string
+    title: string
+    company: string
+  } | null>(null)
+  const [applicationsListingFocusId, setApplicationsListingFocusId] = useState<string | null>(null)
   const userIdRef = useRef<string | null>(null)
 
   const handleNavigate = useCallback((t: Tab) => {
@@ -115,9 +121,20 @@ export default function Home() {
   const loadResume = useCallback(async () => {
     if (!user) return
     setLoading(true)
+    setResumeLoadError(null)
     try {
       const res = await fetch('/api/resume', { credentials: 'include' })
-      const data = await res.json()
+      let data: {
+        success?: boolean
+        error?: string
+        current?: ResumeVersion | null
+        versions?: ResumeVersion[]
+      } = {}
+      try {
+        data = await res.json()
+      } catch {
+        data = {}
+      }
       if (res.status === 401) {
         setUser(null)
         setCurrent(null)
@@ -127,49 +144,41 @@ export default function Home() {
       if (data.success) {
         setCurrent(data.current ?? null)
         setVersions(data.versions || [])
+      } else {
+        setCurrent(null)
+        setVersions([])
+        setResumeLoadError(
+          humanizeFetchError(null, { status: res.status, apiMessage: data.error, fallback: 'Could not load your resume.' })
+        )
       }
     } catch (e) {
       console.error('Failed to load resume:', e)
+      setCurrent(null)
+      setVersions([])
+      setResumeLoadError(humanizeFetchError(e, { fallback: 'Could not load your resume.' }))
     } finally {
       setLoading(false)
     }
   }, [user])
 
   useEffect(() => {
-    if (user) loadResume()
-    else setCurrent(null)
+    if (user) void loadResume()
+    else {
+      setCurrent(null)
+      setVersions([])
+      setResumeLoadError(null)
+    }
   }, [user, loadResume])
 
   const consumeFocusListing = useCallback(() => setFocusListingRequest(null), [])
+  const consumeCoverLetterIntent = useCallback(() => setCoverLetterListingIntent(null), [])
+  const consumeApplicationsListingFocus = useCallback(() => setApplicationsListingFocusId(null), [])
 
   const startTailorFromListing = useCallback(
     async (job: DiscoverListingWithApply, sourceTab: JobsBoardTab) => {
-      let listingId = job.listing_id
-      let stable = job.stable_external_id
-      if (!listingId) {
-        try {
-          const res = await fetch('/api/jobs/sync-discover', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(listingToSyncBody(job)),
-          })
-          const data = await res.json()
-          if (res.ok && data.success && data.listing?.id) {
-            const row = data.listing as JobListingRow
-            listingId = row.id
-            stable = stableExternalId({
-              external_id: row.external_id,
-              source: row.source,
-              title: row.title,
-              company: row.company,
-              url: row.url,
-            })
-          }
-        } catch {
-          // keep listingId null; save can still store JD + denormalized fields
-        }
-      }
+      const synced = await ensureDiscoverListingSynced(job)
+      const listingId = synced?.listingId ?? null
+      const stable = synced?.stable_external_id ?? job.stable_external_id
       setTailorSession({
         sourceTab,
         stable_external_id: stable,
@@ -180,6 +189,36 @@ export default function Home() {
         jdText: jdTextFromListing(job),
       })
       handleNavigate('resume')
+    },
+    [handleNavigate]
+  )
+
+  const startCoverLetterFromListing = useCallback(
+    async (job: DiscoverListingWithApply) => {
+      const synced = await ensureDiscoverListingSynced(job)
+      if (!synced) {
+        alert('Could not save this listing. Try again or add the job from Applications.')
+        return
+      }
+      setCoverLetterListingIntent({
+        listingId: synced.listingId,
+        title: job.title,
+        company: job.company,
+      })
+      handleNavigate('cover-letter')
+    },
+    [handleNavigate]
+  )
+
+  const openApplicationsForListing = useCallback(
+    async (job: DiscoverListingWithApply) => {
+      const synced = await ensureDiscoverListingSynced(job)
+      if (!synced) {
+        alert('Could not save this listing. Try again or add the job from Applications.')
+        return
+      }
+      setApplicationsListingFocusId(synced.listingId)
+      handleNavigate('applications')
     },
     [handleNavigate]
   )
@@ -262,7 +301,7 @@ export default function Home() {
           <span className="app-name">eOS</span>
         </header>
         <main className="app-content">
-          <p className="loading-message">Loading…</p>
+          <AppLoadingBlock message="Checking your session…" className="max-w-md mx-auto" />
         </main>
       </div>
     )
@@ -326,6 +365,10 @@ export default function Home() {
               <AppShell>
                 <AppLoadingBlock message="Loading your workspace…" className="justify-center" />
               </AppShell>
+            ) : resumeLoadError ? (
+              <AppShell>
+                <AppErrorState message={resumeLoadError} onRetry={() => void loadResume()} />
+              </AppShell>
             ) : tab === 'dashboard' ? (
               <Dashboard
                 user={user}
@@ -353,6 +396,8 @@ export default function Home() {
                 }
                 onFocusListingConsumed={consumeFocusListing}
                 onStartTailorResume={(job) => void startTailorFromListing(job, 'jobs')}
+                onStartCoverLetterFromListing={(job) => void startCoverLetterFromListing(job)}
+                onOpenApplicationsForListing={(job) => void openApplicationsForListing(job)}
               />
             ) : tab === 'ai-jobs' ? (
               <AIJobsTab
@@ -362,11 +407,21 @@ export default function Home() {
                 }
                 onFocusListingConsumed={consumeFocusListing}
                 onStartTailorResume={(job) => void startTailorFromListing(job, 'ai-jobs')}
+                onStartCoverLetterFromListing={(job) => void startCoverLetterFromListing(job)}
+                onOpenApplicationsForListing={(job) => void openApplicationsForListing(job)}
               />
             ) : tab === 'applications' ? (
-              <ApplicationsTab onBrowseJobs={() => setTab('jobs')} onBrowseRecommended={() => setTab('ai-jobs')} />
+              <ApplicationsTab
+                onBrowseJobs={() => setTab('jobs')}
+                onBrowseRecommended={() => setTab('ai-jobs')}
+                focusListingId={applicationsListingFocusId}
+                onFocusListingConsumed={consumeApplicationsListingFocus}
+              />
             ) : tab === 'cover-letter' ? (
-              <CoverLetterTab />
+              <CoverLetterTab
+                listingIntent={coverLetterListingIntent}
+                onListingIntentConsumed={consumeCoverLetterIntent}
+              />
             ) : tab === 'resume' ? (
               !current ? (
                 <ResumeUpload onSuccess={loadResume} />

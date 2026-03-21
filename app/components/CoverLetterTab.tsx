@@ -415,7 +415,21 @@ function dbMessagesToUIMessages(dbMessages: DbMessage[]): UIMessage[] {
   }))
 }
 
-export default function CoverLetterTab() {
+export type CoverLetterListingIntent = {
+  listingId: string
+  title: string
+  company: string
+}
+
+interface CoverLetterTabProps {
+  listingIntent?: CoverLetterListingIntent | null
+  onListingIntentConsumed?: () => void
+}
+
+export default function CoverLetterTab({
+  listingIntent = null,
+  onListingIntentConsumed,
+}: CoverLetterTabProps) {
   const [chats, setChats] = useState<ChatItem[]>([])
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [loadedMessages, setLoadedMessages] = useState<UIMessage[] | null>(null)
@@ -432,7 +446,7 @@ export default function CoverLetterTab() {
   const [historySearch, setHistorySearch] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const fullscreenRef = useRef<HTMLDivElement>(null)
-  const sessionInitialized = useRef(false)
+  const sessionInitDone = useRef(false)
   const [savedJobs, setSavedJobs] = useState<Array<{ id: string; title: string; company: string }>>([])
   const [jobLinkForNewChat, setJobLinkForNewChat] = useState('')
   const [latestAssistantDraft, setLatestAssistantDraft] = useState<string | null>(null)
@@ -525,10 +539,65 @@ export default function CoverLetterTab() {
     }
   }, [])
 
-  // First time opening Cover letter this session → auto-create a new chat. Tab/app switch → restore last chat.
+  const persistLastChatId = useCallback((chatId: string | null) => {
+    try {
+      if (typeof window !== 'undefined') {
+        if (chatId) window.sessionStorage.setItem(SESSION_KEY_LAST_CHAT, chatId)
+        else window.sessionStorage.removeItem(SESSION_KEY_LAST_CHAT)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Job-board deep link → linked chat first; else first visit → new chat; else restore last chat.
   useEffect(() => {
-    if (sessionInitialized.current || typeof window === 'undefined') return
-    sessionInitialized.current = true
+    if (typeof window === 'undefined' || sessionInitDone.current) return
+
+    if (listingIntent) {
+      sessionInitDone.current = true
+      window.sessionStorage.setItem(SESSION_KEY_VISITED, '1')
+      void (async () => {
+        try {
+          const res = await fetch('/api/cover-letter/chats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ job_listing_id: listingIntent.listingId }),
+          })
+          const data = await res.json()
+          if (!res.ok || !data.success || !data.chat) {
+            throw new Error(typeof data.error === 'string' ? data.error : 'Could not start chat')
+          }
+          const chat = data.chat as ChatItem
+          setChats((prev) => {
+            if (prev.some((c) => c.id === chat.id)) return prev
+            return [chat, ...prev]
+          })
+          setCurrentChatId(chat.id)
+          setLoadedMessages([])
+          persistLastChatId(chat.id)
+          setSavedJobs((prev) => {
+            if (prev.some((j) => j.id === listingIntent.listingId)) return prev
+            return [
+              {
+                id: listingIntent.listingId,
+                title: (listingIntent.title || 'Untitled').trim() || 'Untitled',
+                company: (listingIntent.company || '—').trim() || '—',
+              },
+              ...prev,
+            ]
+          })
+          onListingIntentConsumed?.()
+        } catch (e) {
+          alert(humanizeFetchError(e, { fallback: 'Could not link this job to a new chat.' }))
+          onListingIntentConsumed?.()
+        }
+      })()
+      return
+    }
+
+    sessionInitDone.current = true
 
     const visited = window.sessionStorage.getItem(SESSION_KEY_VISITED)
     const lastChatId = window.sessionStorage.getItem(SESSION_KEY_LAST_CHAT)
@@ -558,7 +627,7 @@ export default function CoverLetterTab() {
     if (lastChatId) {
       setCurrentChatId(lastChatId)
     }
-  }, [])
+  }, [listingIntent, onListingIntentConsumed, persistLastChatId])
 
   useEffect(() => {
     if (!currentChatId) {
@@ -611,18 +680,7 @@ export default function CoverLetterTab() {
     return () => {
       cancelled = true
     }
-  }, [currentChatId, messagesRetryKey])
-
-  function persistLastChatId(chatId: string | null) {
-    try {
-      if (typeof window !== 'undefined') {
-        if (chatId) window.sessionStorage.setItem(SESSION_KEY_LAST_CHAT, chatId)
-        else window.sessionStorage.removeItem(SESSION_KEY_LAST_CHAT)
-      }
-    } catch {
-      // ignore
-    }
-  }
+  }, [currentChatId, messagesRetryKey, persistLastChatId])
 
   async function onTrackedJobChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const v = e.target.value

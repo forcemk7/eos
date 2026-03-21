@@ -22,6 +22,8 @@ interface JobBoardSplitProps {
   onFocusConsumed?: () => void
   listingsLoading?: boolean
   onTailorResume?: (job: DiscoverListingWithApply) => void | Promise<void>
+  onStartCoverLetter?: (job: DiscoverListingWithApply) => void | Promise<void>
+  onOpenApplications?: (job: DiscoverListingWithApply) => void | Promise<void>
 }
 
 export function JobBoardSplit({
@@ -35,6 +37,8 @@ export function JobBoardSplit({
   onFocusConsumed,
   listingsLoading,
   onTailorResume,
+  onStartCoverLetter,
+  onOpenApplications,
 }: JobBoardSplitProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const [selected, setSelected] = useState<DiscoverListingWithApply | null>(null)
@@ -90,6 +94,8 @@ export function JobBoardSplit({
             onPatchListing={onPatchListing}
             onOpenDataTab={onOpenDataTab}
             onTailorResume={onTailorResume}
+            onStartCoverLetter={onStartCoverLetter}
+            onOpenApplications={onOpenApplications}
           />
         </div>
       )}
@@ -108,6 +114,8 @@ export function JobBoardSplit({
               onPatchListing={onPatchListing}
               onOpenDataTab={onOpenDataTab}
               onTailorResume={onTailorResume}
+              onStartCoverLetter={onStartCoverLetter}
+              onOpenApplications={onOpenApplications}
             />
           )}
         </SheetContent>
